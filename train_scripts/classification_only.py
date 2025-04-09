@@ -28,8 +28,8 @@ if __name__ == "__main__":
 
     transform = transforms.Compose([
         transforms.Resize((336, 544)),
-        transforms.RandomApply([transforms.RandomHorizontalFlip(p=1.0)], p=0.5),
-        transforms.RandomApply([transforms.RandomRotation(degrees=20)], p=0.5),
+        transforms.RandomApply([transforms.RandomHorizontalFlip(p=1.0)], p=0.3),
+        transforms.RandomApply([transforms.RandomRotation(degrees=20)], p=0.3),
         transforms.ToTensor(),
         transforms.Normalize(mean=[.5], std=[.5])
     ])
