@@ -24,6 +24,7 @@ if __name__ == "__main__":
     model.fc = nn.Sequential(
         nn.Linear(512, 2)
     )
+    model.to(device)
 
     transform = transforms.Compose([
         transforms.Resize((336, 544)),
