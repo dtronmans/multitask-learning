@@ -32,7 +32,7 @@ if __name__ == "__main__":
         transforms.Normalize(mean=[.5], std=[.5])
     ])
 
-    dataset = MedicalImageDataset("../final_datasets/lumc_rdg_only_ovary", transform=transform)
+    dataset = MedicalImageDataset("/exports/lkeb-hpc/dzrogmans/lumc_rdg_final", transform=transform)
 
     train_indices, val_indices = train_test_split(range(len(dataset)), test_size=0.2008, random_state=42)
     train_dataset = torch.utils.data.Subset(dataset, train_indices)
