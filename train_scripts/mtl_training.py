@@ -5,7 +5,6 @@ from sklearn.metrics import accuracy_score, recall_score
 from sklearn.model_selection import train_test_split
 from torch import nn, optim
 from torch.utils.data import DataLoader
-from torchvision import models
 from torchvision import transforms
 from tqdm import tqdm
 
@@ -66,7 +65,7 @@ if __name__ == "__main__":
             seg_logits, class_logits = model(inputs)
             cls_loss = classification_criterion(class_logits, labels)
 
-            valid_mask_indices = torch.any(masks != 0, dim=(1, 2))
+            valid_mask_indices = torch.any(masks != 0, dim=(2, 3)).squeeze(1)
             if valid_mask_indices.any():
                 valid_seg_logits = seg_logits[valid_mask_indices]
                 valid_masks = masks[valid_mask_indices].unsqueeze(1).float()  # Add channel dim
