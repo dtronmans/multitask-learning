@@ -27,7 +27,7 @@ if __name__ == "__main__":
         transforms.Normalize(mean=[0.5], std=[0.5])
     ])
 
-    dataset = MedicalImageDataset("../final_datasets/lumc_rdg_final", transform=transform)
+    dataset = MedicalImageDataset("/exports/lkeb-hpc/dzrogmans/lumc_rdg_final", transform=transform)
 
     train_indices, val_indices = train_test_split(
         range(len(dataset)),
@@ -64,7 +64,7 @@ if __name__ == "__main__":
             inputs, labels, masks = batch['image'].to(device), batch['label'].to(device), batch['mask'].to(device)
             optimizer.zero_grad()
             seg_logits, class_logits = model(inputs)
-            cls_loss = classification_criterion(outputs, labels)
+            cls_loss = classification_criterion(class_logits, labels)
 
             valid_mask_indices = torch.any(masks != 0, dim=(1, 2))
             if valid_mask_indices.any():
