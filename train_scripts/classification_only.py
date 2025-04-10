@@ -32,11 +32,10 @@ if __name__ == "__main__":
         transforms.Resize((336, 544)),
         transforms.RandomApply([transforms.RandomHorizontalFlip(p=1.0)], p=0.3),
         transforms.RandomApply([transforms.RandomRotation(degrees=20)], p=0.3),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[.5], std=[.5])
+        transforms.ToTensor()
     ])
 
-    dataset = MedicalImageDataset("/exports/lkeb-hpc/dzrogmans/lumc_rdg_final", transform=transform)
+    dataset = MedicalImageDataset("../final_datasets/lumc_rdg_final", transform=transform)
 
     train_indices, val_indices = train_test_split(
         range(len(dataset)),
@@ -69,7 +68,7 @@ if __name__ == "__main__":
         train_preds = []
         train_labels = []
         for batch in tqdm(train_loader):
-            inputs, labels = batch['image'].to(device), batch['label'].to(device)
+            inputs, labels = batch['image'].to(device), batch['label'].to(device),
             optimizer.zero_grad()
             outputs = model(inputs)
             loss = criterion(outputs, labels)
@@ -89,7 +88,7 @@ if __name__ == "__main__":
         val_labels = []
         with torch.no_grad():
             for batch in tqdm(val_loader):
-                inputs, labels = batch['image'].to(device), batch['label'].to(device)
+                inputs, labels = batch['image'].to(device), batch['label'].to(device),
                 outputs = model(inputs)
                 loss = criterion(outputs, labels)
                 val_loss += loss.item()

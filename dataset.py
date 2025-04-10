@@ -51,7 +51,7 @@ class MedicalImageDataset(Dataset):
                         'hospital': info['hospital']
                     })
 
-        random.shuffle(self.samples)  # Shuffle the dataset
+        random.shuffle(self.samples)
 
     def __len__(self):
         return len(self.samples)
@@ -59,42 +59,47 @@ class MedicalImageDataset(Dataset):
     def __getitem__(self, idx):
         sample = self.samples[idx]
         image = Image.open(sample['image_path']).convert('L')
-        mask = None
 
         if sample['mask_path']:
             mask = Image.open(sample['mask_path']).convert('L')
+            mask_transform = transforms.Compose([transforms.Resize((336, 544)), transforms.ToTensor()])
+            mask = mask_transform(mask)
+        else:
+            mask = torch.zeros((1, 336, 544))
 
         if self.transform:
             image = self.transform(image)
-            if mask:
-                mask = self.transform(mask)
 
         return {
             'image': image,
-            'label': 1 if sample['label'] == "benign" else 0
+            'mask': mask,
+            'label': 0 if sample['label'] == "benign" else 1,
+            'filename': sample['filename'],
+            'menopausal_status': sample['menopausal_status'],
+            'hospital': 1 if sample['hospital'] == "RDG" else 0
         }
 
     def display(self, idx):
         sample = self.__getitem__(idx)
-        image = transforms.ToPILImage()(sample['image']) if isinstance(sample['image'], torch.Tensor) else sample[
+        print(sample['image'].shape)
+        print(sample['mask'].shape)
+        image = transforms.ToPILImage()(sample['image'].squeeze(0)) if isinstance(sample['image'], torch.Tensor) else sample[
             'image']
-        mask = transforms.ToPILImage()(sample['mask']) if sample['mask'] is not None and isinstance(sample['mask'],
+        mask = transforms.ToPILImage()(sample['mask'].squeeze(0)) if sample['mask'] is not None and isinstance(sample['mask'],
                                                                                                     torch.Tensor) else \
-            sample['mask']
+        sample['mask']
 
         fig, ax = plt.subplots(1, 2 if mask else 1, figsize=(12, 6))
 
         title_text = f"{sample['filename']} ({sample['label']})\nHospital: {sample['hospital']}, Menopausal Status: {sample['menopausal_status']}"
 
-        # Show original image
         if mask:
-            ax[0].imshow(image)
+            ax[0].imshow(image, cmap='gray')
             ax[0].set_title(title_text)
             ax[0].axis('off')
 
-            # Show image with mask overlay
-            ax[1].imshow(image)
-            ax[1].imshow(mask, cmap='jet', alpha=0.5)
+            ax[1].imshow(image, cmap='gray')
+            ax[1].imshow(mask, cmap='gray', alpha=0.3)
             ax[1].set_title("With Mask Overlay")
             ax[1].axis('off')
         else:
@@ -107,6 +112,10 @@ class MedicalImageDataset(Dataset):
 
 
 if __name__ == "__main__":
-    dataset = MedicalImageDataset("../final_datasets/lumc_rdg_only_ovary")
+    transform = transforms.Compose([
+        transforms.Resize((336, 544)),
+        transforms.ToTensor()
+    ])
+    dataset = MedicalImageDataset("../final_datasets/lumc_rdg_final", transform=transform)
     for i in range(len(dataset)):
         dataset.display(i)
