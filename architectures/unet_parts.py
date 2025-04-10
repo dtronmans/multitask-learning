@@ -33,7 +33,7 @@ class BasicUNet(nn.Module):
         x = self.up3(x, x2)
         x = self.up4(x, x1)
         logits = self.outc(x)
-        return logits, torch.tensor([[0]])
+        return logits
 
 
 class DoubleConv(nn.Module):

@@ -1,0 +1,3 @@
+- Find a solution for the denoising autoencoder, this needs to be done
+- Train MMOTU segmentation but even better, maybe with more epochs or some data augmentation
+- Train segmentation for own hospital images

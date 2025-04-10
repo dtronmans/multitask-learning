@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 
 
 class MedicalImageDataset(Dataset):
-    def __init__(self, root_dir, transform=None):
+    def __init__(self, root_dir, transform=None, mask_only=False):
         self.root_dir = root_dir
         self.images_dir = os.path.join(root_dir, 'images')
         self.masks_dir = os.path.join(root_dir, 'masks')
@@ -38,6 +38,8 @@ class MedicalImageDataset(Dataset):
                     image_path = os.path.join(image_folder, filename)
                     mask_path = os.path.join(mask_folder, filename)
                     has_mask = os.path.exists(mask_path)
+                    if not has_mask and mask_only:
+                        continue
 
                     base_id = filename.split('_')[0]  # e.g., LUMC12345
                     info = clinical_info.get(base_id, {'menopausal_status': 'Unknown', 'hospital': 'Unknown'})

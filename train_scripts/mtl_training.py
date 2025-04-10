@@ -111,6 +111,9 @@ if __name__ == "__main__":
                 val_preds.extend(predicted.cpu().numpy())
                 val_labels.extend(labels.cpu().numpy())
 
+            val_acc = accuracy_score(val_labels, val_preds)
+            val_recall = recall_score(val_labels, val_preds, average='macro')
+
         print(f"Epoch [{epoch+1}/{num_epochs}] "
               f"| Train CLS Loss: {train_cls_loss/len(train_loader):.4f} "
               f"| Train SEG Loss: {train_seg_loss/len(train_loader):.4f} "
