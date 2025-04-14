@@ -9,6 +9,7 @@ from torchvision import models
 from torchvision import transforms
 from tqdm import tqdm
 
+from architectures.small_cnn import SmallCNN
 from dataset import MedicalImageDataset
 
 if __name__ == "__main__":
@@ -17,15 +18,7 @@ if __name__ == "__main__":
     learning_rate = 0.001
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    model = models.resnet18()
-    model.fc = nn.Sequential(
-        nn.Linear(model.fc.in_features, 8)
-    )
-    model.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False)
-    model.load_state_dict(torch.load("models/mmotu/resnet18.pt", map_location=device))
-    model.fc = nn.Sequential(
-        nn.Linear(512, 2)
-    )
+    model = SmallCNN(2)
     model.to(device)
 
     transform = transforms.Compose([
