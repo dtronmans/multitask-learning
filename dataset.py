@@ -75,7 +75,7 @@ class MedicalImageDataset(Dataset):
             'image': image,
             'mask': mask,
             'label': 0 if sample['label'] == "benign" else 1,
-            'menopausal_status': sample['menopausal_status'],
+            'menopausal_status': 1 if sample['menopausal_status'] == 1 else 0,
             'hospital': 1 if sample['hospital'] == "RDG" else 0
         }
 
