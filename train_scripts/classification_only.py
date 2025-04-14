@@ -32,10 +32,11 @@ if __name__ == "__main__":
         transforms.Resize((336, 544)),
         transforms.RandomApply([transforms.RandomHorizontalFlip(p=1.0)], p=0.3),
         transforms.RandomApply([transforms.RandomRotation(degrees=20)], p=0.3),
-        transforms.ToTensor()
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.5], std=[0.5])
     ])
 
-    dataset = MedicalImageDataset("../final_datasets/lumc_rdg_final", transform=transform)
+    dataset = MedicalImageDataset("/exports/lkeb-hpc/dzrogmans/lumc_rdg_final", transform=transform)
 
     train_indices, val_indices = train_test_split(
         range(len(dataset)),

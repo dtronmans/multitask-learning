@@ -48,7 +48,6 @@ class MedicalImageDataset(Dataset):
                         'image_path': image_path,
                         'mask_path': mask_path if has_mask else None,
                         'label': label,
-                        'filename': filename,
                         'menopausal_status': info['menopausal_status'],
                         'hospital': info['hospital']
                     })
@@ -76,15 +75,12 @@ class MedicalImageDataset(Dataset):
             'image': image,
             'mask': mask,
             'label': 0 if sample['label'] == "benign" else 1,
-            'filename': sample['filename'],
             'menopausal_status': sample['menopausal_status'],
             'hospital': 1 if sample['hospital'] == "RDG" else 0
         }
 
     def display(self, idx):
         sample = self.__getitem__(idx)
-        print(sample['image'].shape)
-        print(sample['mask'].shape)
         image = transforms.ToPILImage()(sample['image'].squeeze(0)) if isinstance(sample['image'], torch.Tensor) else sample[
             'image']
         mask = transforms.ToPILImage()(sample['mask'].squeeze(0)) if sample['mask'] is not None and isinstance(sample['mask'],
@@ -93,7 +89,7 @@ class MedicalImageDataset(Dataset):
 
         fig, ax = plt.subplots(1, 2 if mask else 1, figsize=(12, 6))
 
-        title_text = f"{sample['filename']} ({sample['label']})\nHospital: {sample['hospital']}, Menopausal Status: {sample['menopausal_status']}"
+        title_text = f"({sample['label']})\nHospital: {sample['hospital']}, Menopausal Status: {sample['menopausal_status']}"
 
         if mask:
             ax[0].imshow(image, cmap='gray')
