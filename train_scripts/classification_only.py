@@ -36,16 +36,8 @@ if __name__ == "__main__":
         transforms.Normalize(mean=[0.5], std=[0.5])
     ])
 
-    dataset = MedicalImageDataset("/exports/lkeb-hpc/dzrogmans/lumc_rdg_final", transform=transform)
-
-    train_indices, val_indices = train_test_split(
-        range(len(dataset)),
-        test_size=0.2,
-        stratify=[dataset[idx]['label'] for idx in range(len(dataset))],
-        random_state=42
-    )
-    train_dataset = torch.utils.data.Subset(dataset, train_indices)
-    val_dataset = torch.utils.data.Subset(dataset, val_indices)
+    train_dataset = MedicalImageDataset(root_dir='your_root', split='train', transform=transform)
+    val_dataset = MedicalImageDataset(root_dir='your_root', split='val', transform=transform)
 
     print("Train dataset length: " + str(len(train_dataset)))
     print("Val dataset length: " + str(len(val_dataset)))
@@ -53,14 +45,7 @@ if __name__ == "__main__":
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 
-    train_targets = [dataset[idx]['label'] for idx in train_indices]
-    label_counts = Counter(train_targets)
-
-    total = sum(label_counts.values())
-    class_weights = [total / label_counts[i] for i in range(len(label_counts))]
-    weights_tensor = torch.FloatTensor(class_weights).to(device)
-
-    criterion = nn.CrossEntropyLoss(weight=weights_tensor)
+    criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
     for epoch in range(num_epochs):
@@ -69,7 +54,7 @@ if __name__ == "__main__":
         train_preds = []
         train_labels = []
         for batch in tqdm(train_loader):
-            inputs, labels = batch['image'].to(device), batch['label'].to(device),
+            inputs, labels = batch['image'].to(device), batch['label'].to(device)
             optimizer.zero_grad()
             outputs = model(inputs)
             loss = criterion(outputs, labels)
@@ -89,7 +74,7 @@ if __name__ == "__main__":
         val_labels = []
         with torch.no_grad():
             for batch in tqdm(val_loader):
-                inputs, labels = batch['image'].to(device), batch['label'].to(device),
+                inputs, labels = batch['image'].to(device), batch['label'].to(device)
                 outputs = model(inputs)
                 loss = criterion(outputs, labels)
                 val_loss += loss.item()

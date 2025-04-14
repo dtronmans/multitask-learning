@@ -10,49 +10,54 @@ import matplotlib.pyplot as plt
 
 
 class MedicalImageDataset(Dataset):
-    def __init__(self, root_dir, transform=None, mask_only=False):
+    def __init__(self, root_dir, split='train', transform=None, mask_only=False):
         self.root_dir = root_dir
         self.images_dir = os.path.join(root_dir, 'images')
         self.masks_dir = os.path.join(root_dir, 'masks')
         self.patient_list = pd.read_csv(os.path.join(root_dir, 'lumc_rdgg_attributes_filtered.csv'))
         self.transform = transform
+        self.mask_only = mask_only
 
         self.samples = []
 
-        # Create a mapping from Study ID to clinical information
+        # Load filenames for the current split (train.txt, val.txt, test.txt)
+        split_file = os.path.join(root_dir, f'{split}.txt')
+        with open(split_file, 'r') as f:
+            split_filenames = [line.strip().replace('\\', os.sep) for line in f]
+
+        # Create a mapping from Study ID to clinical info
         clinical_info = {}
         for _, row in self.patient_list.iterrows():
             study_id = row['Study ID']
             clinical_info[study_id] = {
                 'menopausal_status': row.get('Menopausal status', 'Unknown'),
                 'malignancy': 'malignant' if row['Malignancy status'] == 1 else 'benign',
-                'hospital': 'LUMC' if study_id.startswith('LUMC') else 'RDG'
+                'hospital': 'LUMC' if study_id.startswith('LUM') else 'RDG'
             }
 
-        for label in ['benign', 'malignant']:
-            image_folder = os.path.join(self.images_dir, label)
-            mask_folder = os.path.join(self.masks_dir, label)
+        for rel_path in split_filenames:
+            label = rel_path.split(os.sep)[0]
+            filename = os.path.basename(rel_path)
 
-            for filename in os.listdir(image_folder):
-                if filename.lower().endswith(('png', 'jpg', 'jpeg', '.tif')):
-                    image_path = os.path.join(image_folder, filename)
-                    mask_path = os.path.join(mask_folder, filename)
-                    has_mask = os.path.exists(mask_path)
-                    if not has_mask and mask_only:
-                        continue
+            image_path = os.path.join(self.images_dir, rel_path)
+            mask_path = os.path.join(self.masks_dir, rel_path)
 
-                    base_id = filename.split('_')[0]  # e.g., LUMC12345
-                    info = clinical_info.get(base_id, {'menopausal_status': 'Unknown', 'hospital': 'Unknown'})
+            if self.mask_only and not os.path.exists(mask_path):
+                continue
 
-                    self.samples.append({
-                        'image_path': image_path,
-                        'mask_path': mask_path if has_mask else None,
-                        'label': label,
-                        'menopausal_status': info['menopausal_status'],
-                        'hospital': info['hospital']
-                    })
+            base_id = filename.split('_')[0]
+            info = clinical_info.get(base_id, {'menopausal_status': 'Unknown', 'hospital': 'Unknown'})
 
-        random.shuffle(self.samples)
+            if info['hospital'] == "Unknown":
+                print(f"Warning: Missing clinical info for {filename}")
+
+            self.samples.append({
+                'image_path': image_path,
+                'mask_path': mask_path if os.path.exists(mask_path) else None,
+                'label': label,
+                'menopausal_status': info['menopausal_status'],
+                'hospital': info['hospital']
+            })
 
     def __len__(self):
         return len(self.samples)
@@ -74,10 +79,11 @@ class MedicalImageDataset(Dataset):
         return {
             'image': image,
             'mask': mask,
-            'label': 0 if sample['label'] == "benign" else 1,
-            'menopausal_status': 1 if sample['menopausal_status'] == 1 else 0,
-            'hospital': 1 if sample['hospital'] == "RDG" else 0
+            'label': sample['label'],
+            'menopausal_status': sample['menopausal_status'],
+            'hospital': sample['hospital']
         }
+
 
     def display(self, idx):
         sample = self.__getitem__(idx)
