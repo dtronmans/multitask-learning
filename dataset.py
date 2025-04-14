@@ -54,7 +54,7 @@ class MedicalImageDataset(Dataset):
             self.samples.append({
                 'image_path': image_path,
                 'mask_path': mask_path if os.path.exists(mask_path) else None,
-                'label': label,
+                'label': 1 if label == "malignant" else 0,
                 'menopausal_status': info['menopausal_status'],
                 'hospital': info['hospital']
             })

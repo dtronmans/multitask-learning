@@ -36,8 +36,8 @@ if __name__ == "__main__":
         transforms.Normalize(mean=[0.5], std=[0.5])
     ])
 
-    train_dataset = MedicalImageDataset(root_dir='your_root', split='train', transform=transform)
-    val_dataset = MedicalImageDataset(root_dir='your_root', split='val', transform=transform)
+    train_dataset = MedicalImageDataset(root_dir='lkeb-hpc/exports/dzrogmans/lumc_rdg_final', split='train', transform=transform)
+    val_dataset = MedicalImageDataset(root_dir='lkeb-hpc/exports/dzrogmans/lumc_rdg_final', split='val', transform=transform)
 
     print("Train dataset length: " + str(len(train_dataset)))
     print("Val dataset length: " + str(len(val_dataset)))
