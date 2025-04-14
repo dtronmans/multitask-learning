@@ -36,8 +36,14 @@ if __name__ == "__main__":
         transforms.Normalize(mean=[0.5], std=[0.5])
     ])
 
+    val_transform = transforms.Compose([
+        transforms.Resize((336, 544)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.5], std=[0.5])
+    ])
+
     train_dataset = MedicalImageDataset(root_dir='lkeb-hpc/exports/dzrogmans/lumc_rdg_final', split='train', transform=transform)
-    val_dataset = MedicalImageDataset(root_dir='lkeb-hpc/exports/dzrogmans/lumc_rdg_final', split='val', transform=transform)
+    val_dataset = MedicalImageDataset(root_dir='lkeb-hpc/exports/dzrogmans/lumc_rdg_final', split='val', transform=val_transform)
 
     print("Train dataset length: " + str(len(train_dataset)))
     print("Val dataset length: " + str(len(val_dataset)))

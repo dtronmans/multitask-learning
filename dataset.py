@@ -120,6 +120,6 @@ if __name__ == "__main__":
         transforms.Resize((336, 544)),
         transforms.ToTensor()
     ])
-    dataset = MedicalImageDataset("../final_datasets/lumc_rdg_final", transform=transform)
+    dataset = MedicalImageDataset("../final_datasets/lumc_rdg_final", transform=transform, mask_only=True)
     for i in range(len(dataset)):
         dataset.display(i)
