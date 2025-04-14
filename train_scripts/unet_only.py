@@ -73,3 +73,4 @@ if __name__ == "__main__":
         print(f"Epoch {epoch + 1}/{num_epochs} - "
               f"Train Loss: {avg_train_loss:.4f} - "
               f"Val Loss: {avg_val_loss:.4f}")
+    torch.save(model.state_dict(), "models/hospital/unet.pt")

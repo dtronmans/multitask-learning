@@ -32,18 +32,16 @@ if __name__ == "__main__":
         transforms.Resize((336, 544)),
         transforms.RandomApply([transforms.RandomHorizontalFlip(p=1.0)], p=0.3),
         transforms.RandomApply([transforms.RandomRotation(degrees=20)], p=0.3),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.5], std=[0.5])
+        transforms.ToTensor()
     ])
 
     val_transform = transforms.Compose([
         transforms.Resize((336, 544)),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.5], std=[0.5])
+        transforms.ToTensor()
     ])
 
-    train_dataset = MedicalImageDataset(root_dir='lkeb-hpc/exports/dzrogmans/lumc_rdg_final', split='train', transform=transform)
-    val_dataset = MedicalImageDataset(root_dir='lkeb-hpc/exports/dzrogmans/lumc_rdg_final', split='val', transform=val_transform)
+    train_dataset = MedicalImageDataset(root_dir='/exports/lkeb-hpc/dzrogmans/lumc_rdg_final', split='train', transform=transform)
+    val_dataset = MedicalImageDataset(root_dir='/exports/lkeb-hpc/dzrogmans/lumc_rdg_final', split='val', transform=val_transform)
 
     print("Train dataset length: " + str(len(train_dataset)))
     print("Val dataset length: " + str(len(val_dataset)))
@@ -51,7 +49,8 @@ if __name__ == "__main__":
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 
-    criterion = nn.CrossEntropyLoss()
+    weights = torch.tensor([1.0,3.0], dtype=torch.float)
+    criterion = nn.CrossEntropyLoss(weight=weights.to(device))
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
     for epoch in range(num_epochs):
