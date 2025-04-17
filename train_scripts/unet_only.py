@@ -61,8 +61,8 @@ if __name__ == "__main__":
                 seg_loss = segmentation_criterion(seg_logits, masks)
                 val_loss += seg_loss.item() * inputs.size(0)
 
-        avg_train_loss = train_loss / len(train_loader)
-        avg_val_loss = val_loss / len(val_loader)
+        avg_train_loss = train_loss / len(train_dataset)
+        avg_val_loss = val_loss / len(val_dataset)
 
         print(f"Epoch {epoch + 1}/{num_epochs} - "
               f"Train Loss: {avg_train_loss:.4f} - "
