@@ -16,7 +16,7 @@ if __name__ == "__main__":
     learning_rate = 0.001
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    model = models.efficientnet_b1()
+    model = models.efficientnet_b0()
 
     model.features[0][0] = nn.Conv2d(
         in_channels=1,
@@ -27,7 +27,7 @@ if __name__ == "__main__":
         bias=False
     )
     model.classifier[1] = nn.Linear(model.classifier[1].in_features, 8)
-    model.load_state_dict(torch.load("mmotu_efficientnet_b1.pt", map_location=device))
+    model.load_state_dict(torch.load("models/mmotu/mmotu_efficientnet_b0.pt", map_location=device))
     model.classifier[1] = nn.Linear(model.classifier[1].in_features, 2)
     model.to(device)
 
