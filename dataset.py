@@ -32,7 +32,7 @@ class MedicalImageDataset(Dataset):
             clinical_info[study_id] = {
                 'menopausal_status': row.get('Menopausal status', 'Unknown'),
                 'malignancy': 'malignant' if row['Malignancy status'] == 1 else 'benign',
-                'hospital': 'LUMC' if study_id.startswith('LUM') else 'RDG'
+                'hospital': 0 if study_id.startswith('LUM') else 1
             }
 
         for rel_path in split_filenames:
@@ -46,7 +46,7 @@ class MedicalImageDataset(Dataset):
                 continue
 
             base_id = filename.split('_')[0]
-            info = clinical_info.get(base_id, {'menopausal_status': 'Unknown', 'hospital': 'Unknown'})
+            info = clinical_info.get(base_id, {'menopausal_status': 0, 'hospital': 1})
 
             if info['hospital'] == "Unknown":
                 print(f"Warning: Missing clinical info for {filename}")
@@ -55,8 +55,10 @@ class MedicalImageDataset(Dataset):
                 'image_path': image_path,
                 'mask_path': mask_path if os.path.exists(mask_path) else None,
                 'label': 0 if label == "benign" else 1,
+                'filename': filename,
                 'menopausal_status': info['menopausal_status'],
-                'hospital': info['hospital']
+                'hospital': info['hospital'],
+                'clinical': torch.tensor([info['menopausal_status'], info['hospital']], dtype=torch.float32)
             })
         self.samples = self.samples[::-1]
 
@@ -82,17 +84,20 @@ class MedicalImageDataset(Dataset):
             'mask': mask,
             'label': sample['label'],
             'menopausal_status': sample['menopausal_status'],
-            'hospital': sample['hospital']
+            'filename': sample['filename'],
+            'hospital': sample['hospital'],
+            'clinical': sample['clinical']
         }
-
 
     def display(self, idx):
         sample = self.__getitem__(idx)
-        image = transforms.ToPILImage()(sample['image'].squeeze(0)) if isinstance(sample['image'], torch.Tensor) else sample[
+        image = transforms.ToPILImage()(sample['image'].squeeze(0)) if isinstance(sample['image'], torch.Tensor) else \
+        sample[
             'image']
-        mask = transforms.ToPILImage()(sample['mask'].squeeze(0)) if sample['mask'] is not None and isinstance(sample['mask'],
-                                                                                                    torch.Tensor) else \
-        sample['mask']
+        mask = transforms.ToPILImage()(sample['mask'].squeeze(0)) if sample['mask'] is not None and isinstance(
+            sample['mask'],
+            torch.Tensor) else \
+            sample['mask']
 
         fig, ax = plt.subplots(1, 2 if mask else 1, figsize=(12, 6))
 
@@ -121,6 +126,7 @@ if __name__ == "__main__":
         transforms.Resize((336, 544)),
         transforms.ToTensor()
     ])
-    dataset = MedicalImageDataset("../final_datasets/once_more/mtl_final", split="train", transform=transform, mask_only=False)
+    dataset = MedicalImageDataset("../final_datasets/once_more/mtl_final", split="train", transform=transform,
+                                  mask_only=False)
     for i in range(len(dataset)):
-        dataset.display(i)
+        print(dataset[i])
