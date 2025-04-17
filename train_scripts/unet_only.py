@@ -8,8 +8,8 @@ from architectures.unet_parts import BasicUNet
 from dataset import MedicalImageDataset
 
 if __name__ == "__main__":
-    num_epochs = 50
-    batch_size = 4
+    num_epochs = 20
+    batch_size = 8
     learning_rate = 0.001
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -23,9 +23,9 @@ if __name__ == "__main__":
         transforms.Normalize(mean=[0.5], std=[0.5])
     ])
 
-    train_dataset = MedicalImageDataset("/exports/lkeb-hpc/dzrogmans/mtl_denoised", split="train", transform=transform,
+    train_dataset = MedicalImageDataset("/exports/lkeb-hpc/dzrogmans/mtl_final", split="train", transform=transform,
                                         mask_only=True)
-    val_dataset = MedicalImageDataset("/exports/lkeb-hpc/dzrogmans/mtl_denoised", split="val", transform=transform,
+    val_dataset = MedicalImageDataset("/exports/lkeb-hpc/dzrogmans/mtl_final", split="val", transform=transform,
                                       mask_only=True)
 
     print("Train dataset length: " + str(len(train_dataset)))
