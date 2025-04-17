@@ -1,5 +1,4 @@
 import torch.cuda
-from sklearn.model_selection import train_test_split
 from torch import nn, optim
 from torch.utils.data import DataLoader
 from torchvision import transforms
@@ -23,16 +22,10 @@ if __name__ == "__main__":
         transforms.Normalize(mean=[0.5], std=[0.5])
     ])
 
-    dataset = MedicalImageDataset("../final_datasets/lumc_rdg_final", transform=transform, mask_only=True)
-
-    train_indices, val_indices = train_test_split(
-        range(len(dataset)),
-        test_size=0.2,
-        stratify=[dataset[idx]['label'] for idx in range(len(dataset))],
-        random_state=42
-    )
-    train_dataset = torch.utils.data.Subset(dataset, train_indices)
-    val_dataset = torch.utils.data.Subset(dataset, val_indices)
+    train_dataset = MedicalImageDataset("../final_datasets/lumc_rdg_final", split="train", transform=transform,
+                                        mask_only=True)
+    val_dataset = MedicalImageDataset("../final_datasets/lumc_rdg_final", split="val", transform=transform,
+                                      mask_only=True)
 
     print("Train dataset length: " + str(len(train_dataset)))
     print("Val dataset length: " + str(len(val_dataset)))
@@ -73,4 +66,5 @@ if __name__ == "__main__":
         print(f"Epoch {epoch + 1}/{num_epochs} - "
               f"Train Loss: {avg_train_loss:.4f} - "
               f"Val Loss: {avg_val_loss:.4f}")
+
     torch.save(model.state_dict(), "models/hospital/unet.pt")

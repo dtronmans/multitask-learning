@@ -42,7 +42,7 @@ def infer(model, dataloader):
 
 
 if __name__ == "__main__":
-    file_path = "../final_datasets/lumc_rdg_final"
+    file_path = "../final_datasets/once_more/mtl_final"
     model_path = "models/mmotu/mmotu_unet_grayscale.pt"
     transform = transforms.Compose([
         transforms.Resize((336, 544)),
@@ -51,6 +51,7 @@ if __name__ == "__main__":
     ])
 
     dataset = MedicalImageDataset(file_path, transform=transform)
+    print(len(dataset))
     dataloader = DataLoader(dataset, batch_size=1, shuffle=True)
 
     model = BasicUNet(1, 1)

@@ -14,7 +14,7 @@ class MedicalImageDataset(Dataset):
         self.root_dir = root_dir
         self.images_dir = os.path.join(root_dir, 'images')
         self.masks_dir = os.path.join(root_dir, 'masks')
-        self.patient_list = pd.read_csv(os.path.join(root_dir, 'lumc_rdgg_attributes_filtered.csv'))
+        self.patient_list = pd.read_csv(os.path.join(root_dir, 'patient_info.csv'))
         self.transform = transform
         self.mask_only = mask_only
 
@@ -28,7 +28,7 @@ class MedicalImageDataset(Dataset):
         # Create a mapping from Study ID to clinical info
         clinical_info = {}
         for _, row in self.patient_list.iterrows():
-            study_id = row['Study ID']
+            study_id = row['STUDY_ID']
             clinical_info[study_id] = {
                 'menopausal_status': row.get('Menopausal status', 'Unknown'),
                 'malignancy': 'malignant' if row['Malignancy status'] == 1 else 'benign',
@@ -54,10 +54,11 @@ class MedicalImageDataset(Dataset):
             self.samples.append({
                 'image_path': image_path,
                 'mask_path': mask_path if os.path.exists(mask_path) else None,
-                'label': 1 if label == "malignant" else 0,
+                'label': 0 if label == "benign" else 1,
                 'menopausal_status': info['menopausal_status'],
                 'hospital': info['hospital']
             })
+        self.samples = self.samples[::-1]
 
     def __len__(self):
         return len(self.samples)
@@ -120,6 +121,6 @@ if __name__ == "__main__":
         transforms.Resize((336, 544)),
         transforms.ToTensor()
     ])
-    dataset = MedicalImageDataset("../final_datasets/lumc_rdg_final", transform=transform, mask_only=True)
+    dataset = MedicalImageDataset("../final_datasets/once_more/mtl_final", split="train", transform=transform, mask_only=False)
     for i in range(len(dataset)):
         dataset.display(i)

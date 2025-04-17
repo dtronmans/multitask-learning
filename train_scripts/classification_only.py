@@ -2,14 +2,11 @@ from collections import Counter
 
 import torch
 from sklearn.metrics import accuracy_score, recall_score
-from sklearn.model_selection import train_test_split
 from torch import nn, optim
 from torch.utils.data import DataLoader
-from torchvision import models
-from torchvision import transforms
+from torchvision import transforms, models
 from tqdm import tqdm
 
-from architectures.small_cnn import SmallCNN
 from dataset import MedicalImageDataset
 
 if __name__ == "__main__":
@@ -18,7 +15,19 @@ if __name__ == "__main__":
     learning_rate = 0.001
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    model = SmallCNN(2)
+    model = models.efficientnet_b1()
+
+    model.features[0][0] = nn.Conv2d(
+        in_channels=1,
+        out_channels=32,
+        kernel_size=3,
+        stride=2,
+        padding=1,
+        bias=False
+    )
+    model.classifier[1] = nn.Linear(model.classifier[1].in_features, 8)
+    model.load_state_dict(torch.load("mmotu_efficientnet_b1.pt", map_location=device))
+    model.classifier[1] = nn.Linear(model.classifier[1].in_features, 2)
     model.to(device)
 
     transform = transforms.Compose([
@@ -33,8 +42,8 @@ if __name__ == "__main__":
         transforms.ToTensor()
     ])
 
-    train_dataset = MedicalImageDataset(root_dir='/exports/lkeb-hpc/dzrogmans/lumc_rdg_final', split='train', transform=transform)
-    val_dataset = MedicalImageDataset(root_dir='/exports/lkeb-hpc/dzrogmans/lumc_rdg_final', split='val', transform=val_transform)
+    train_dataset = MedicalImageDataset("../final_datasets/once_more/mtl_final", split="train", transform=transform)
+    val_dataset = MedicalImageDataset("../final_datasets/once_more/mtl_final", split="val", transform=transform)
 
     print("Train dataset length: " + str(len(train_dataset)))
     print("Val dataset length: " + str(len(val_dataset)))
@@ -42,8 +51,18 @@ if __name__ == "__main__":
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 
-    weights = torch.tensor([1.0,3.0], dtype=torch.float)
-    criterion = nn.CrossEntropyLoss(weight=weights.to(device))
+    train_targets = [sample['label'] for sample in train_dataset]
+
+    label_counts = Counter(train_targets)
+    print(label_counts)
+
+    total = sum(label_counts.values())
+    num_classes = max(label_counts.keys())
+
+    class_weights = [total / label_counts[i] if i in label_counts else 0.0 for i in range(num_classes)]
+    weights_tensor = torch.FloatTensor(class_weights).to(device)
+
+    criterion = nn.CrossEntropyLoss(weight=weights_tensor)
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
     for epoch in range(num_epochs):

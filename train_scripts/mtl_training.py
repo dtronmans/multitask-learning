@@ -2,7 +2,6 @@ from collections import Counter
 
 import torch
 from sklearn.metrics import accuracy_score, recall_score
-from sklearn.model_selection import train_test_split
 from torch import nn, optim
 from torch.utils.data import DataLoader
 from torchvision import transforms
@@ -26,16 +25,8 @@ if __name__ == "__main__":
         transforms.Normalize(mean=[0.5], std=[0.5])
     ])
 
-    dataset = MedicalImageDataset("/exports/lkeb-hpc/dzrogmans/lumc_rdg_final", transform=transform)
-
-    train_indices, val_indices = train_test_split(
-        range(len(dataset)),
-        test_size=0.2,
-        stratify=[dataset[idx]['label'] for idx in range(len(dataset))],
-        random_state=42
-    )
-    train_dataset = torch.utils.data.Subset(dataset, train_indices)
-    val_dataset = torch.utils.data.Subset(dataset, val_indices)
+    train_dataset = MedicalImageDataset("../final_datasets/once_more/mtl_final", split="train", transform=transform)
+    val_dataset = MedicalImageDataset("../final_datasets/once_more/mtl_final", split="val", transform=transform)
 
     print("Train dataset length: " + str(len(train_dataset)))
     print("Val dataset length: " + str(len(val_dataset)))
@@ -43,11 +34,17 @@ if __name__ == "__main__":
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 
-    train_targets = [dataset[idx]['label'] for idx in train_indices]
-    label_counts = Counter(train_targets)
+    train_targets = [sample['label'] for sample in train_dataset]
 
+    # Count occurrences of each class
+    label_counts = Counter(train_targets)
+    print(label_counts)
+
+    # Compute class weights
     total = sum(label_counts.values())
-    class_weights = [total / label_counts[i] for i in range(len(label_counts))]
+    num_classes = max(label_counts.keys()) + 1  # assuming labels are 0-indexed
+
+    class_weights = [total / label_counts[i] if i in label_counts else 0.0 for i in range(num_classes)]
     weights_tensor = torch.FloatTensor(class_weights).to(device)
 
     classification_criterion = nn.CrossEntropyLoss(weight=weights_tensor)
@@ -56,7 +53,7 @@ if __name__ == "__main__":
 
     for epoch in range(num_epochs):
         model.train()
-        train_cls_loss, train_seg_loss = 0, 0
+        train_cls_loss, train_seg_loss = 0.0, 0.0
         train_preds, train_labels = [], []
 
         for batch in tqdm(train_loader):
@@ -68,7 +65,7 @@ if __name__ == "__main__":
             valid_mask_indices = torch.any(masks != 0, dim=(2, 3)).squeeze(1)
             if valid_mask_indices.any():
                 valid_seg_logits = seg_logits[valid_mask_indices]
-                valid_masks = masks[valid_mask_indices].unsqueeze(1).float()  # Add channel dim
+                valid_masks = masks[valid_mask_indices].float()
                 seg_loss = segmentation_criterion(valid_seg_logits, valid_masks)
             else:
                 seg_loss = torch.tensor(0.0, device=device)
@@ -88,7 +85,7 @@ if __name__ == "__main__":
         train_recall = recall_score(train_labels, train_preds, average='macro')
 
         model.eval()
-        val_cls_loss, val_seg_loss = 0, 0
+        val_cls_loss, val_seg_loss = 0.0, 0.0
         val_preds, val_labels = [], []
         with torch.no_grad():
             for batch in tqdm(val_loader):
@@ -96,10 +93,10 @@ if __name__ == "__main__":
                 seg_logits, class_logits = model(inputs)
                 cls_loss = classification_criterion(class_logits, labels)
 
-                valid_mask_indices = torch.any(masks != 0, dim=(1, 2))
+                valid_mask_indices = torch.any(masks != 0, dim=(2, 3))
                 if valid_mask_indices.any():
                     valid_seg_logits = seg_logits[valid_mask_indices]
-                    valid_masks = masks[valid_mask_indices].unsqueeze(1).float()
+                    valid_masks = masks[valid_mask_indices].float()
                     seg_loss = segmentation_criterion(valid_seg_logits, valid_masks)
                 else:
                     seg_loss = torch.tensor(0.0, device=device)
