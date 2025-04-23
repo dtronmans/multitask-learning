@@ -12,16 +12,17 @@ def infer(model, dataloader):
     model.eval()
     with torch.no_grad():
         for batch in dataloader:
-            image = batch['image']  # shape: [1, 1, H, W]
-            output = model(image)
+            image, mask, label, filename, clinical = batch['image'], batch['mask'], batch['label'], batch['filename'], batch['clinical']  # shape: [1, 1, H, W]
+            # output = model(image)
 
             # Apply sigmoid and threshold to get binary mask
-            pred_mask = torch.sigmoid(output)
-            pred_mask = (pred_mask > 0.5).float()
+            # pred_mask = torch.sigmoid(output)
+            # pred_mask = (pred_mask > 0.5).float()
 
             # Convert tensors to numpy for visualization
             image_np = image.squeeze().numpy()
-            mask_np = pred_mask.squeeze().numpy()
+            # mask_np = pred_mask.squeeze().numpy()
+            mask_original = mask.squeeze().numpy()
 
             # Normalize image for display
             image_np = (image_np * 0.5) + 0.5
@@ -33,24 +34,23 @@ def infer(model, dataloader):
             plt.axis('off')
 
             plt.subplot(1, 2, 2)
-            plt.title("Predicted Mask Overlay")
+            plt.title("Mask Overlay")
             plt.imshow(image_np, cmap='gray')
-            plt.imshow(mask_np, cmap='jet', alpha=0.5)
+            plt.imshow(mask_original, cmap='jet', alpha=0.5)
             plt.axis('off')
 
             plt.show()
 
 
 if __name__ == "__main__":
-    file_path = "../final_datasets/once_more/mtl_final"
-    model_path = "models/mmotu/mmotu_unet_grayscale.pt"
+    file_path = "../final_datasets/once_more/mtl_denoised"
+    model_path = "models/hospital/unet_not_normalized_denoised_2.pt"
     transform = transforms.Compose([
         transforms.Resize((336, 544)),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.5], std=[0.5])
+        transforms.ToTensor()
     ])
 
-    dataset = MedicalImageDataset(file_path, transform=transform)
+    dataset = MedicalImageDataset(file_path, transform=transform, mask_only=True)
     print(len(dataset))
     dataloader = DataLoader(dataset, batch_size=1, shuffle=True)
 

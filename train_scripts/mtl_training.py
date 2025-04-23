@@ -8,25 +8,32 @@ from torchvision import transforms
 from tqdm import tqdm
 
 from architectures.mtl import MTLNet
+from config import Config
 from dataset import MedicalImageDataset
 
 if __name__ == "__main__":
-    num_epochs = 100
-    batch_size = 4
-    learning_rate = 0.001
+    config = Config("config.json")
+    num_epochs, batch_size, learning_rate = config.num_epochs, config.batch_size, config.learning_rate
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     model = MTLNet(1, 1, 2)
     model.to(device)
 
     transform = transforms.Compose([
-        transforms.Resize((336, 544)),
+        transforms.Resize((164, 164)),
+        transforms.RandomHorizontalFlip(),
+        transforms.RandomRotation(20),
+        transforms.RandomAffine(degrees=10, translate=(0.05, 0.05), scale=(0.95, 1.05)),
         transforms.ToTensor(),
-        transforms.Normalize(mean=[0.5], std=[0.5])
     ])
 
-    train_dataset = MedicalImageDataset("../final_datasets/once_more/mtl_final", split="train", transform=transform)
-    val_dataset = MedicalImageDataset("../final_datasets/once_more/mtl_final", split="val", transform=transform)
+    val_transform = transforms.Compose([
+        transforms.Resize((164, 164)),
+        transforms.ToTensor(),
+    ])
+
+    train_dataset = MedicalImageDataset("config.dataset_path", split="train", transform=transform)
+    val_dataset = MedicalImageDataset("config.dataset_path", split="val", transform=val_transform)
 
     print("Train dataset length: " + str(len(train_dataset)))
     print("Val dataset length: " + str(len(val_dataset)))
@@ -34,20 +41,8 @@ if __name__ == "__main__":
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 
-    train_targets = [sample['label'] for sample in train_dataset]
-
-    # Count occurrences of each class
-    label_counts = Counter(train_targets)
-    print(label_counts)
-
-    # Compute class weights
-    total = sum(label_counts.values())
-    num_classes = max(label_counts.keys()) + 1  # assuming labels are 0-indexed
-
-    class_weights = [total / label_counts[i] if i in label_counts else 0.0 for i in range(num_classes)]
-    weights_tensor = torch.FloatTensor(class_weights).to(device)
-
-    classification_criterion = nn.CrossEntropyLoss(weight=weights_tensor)
+    class_weights = torch.tensor([1.0, 2.0]).to(device)
+    classification_criterion = nn.CrossEntropyLoss(weight=class_weights)
     segmentation_criterion = nn.BCEWithLogitsLoss()
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 

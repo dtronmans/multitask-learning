@@ -55,7 +55,6 @@ class MedicalImageDataset(Dataset):
                 'image_path': image_path,
                 'mask_path': mask_path if os.path.exists(mask_path) else None,
                 'label': 0 if label == "benign" else 1,
-                'filename': filename,
                 'menopausal_status': info['menopausal_status'],
                 'hospital': info['hospital'],
                 'clinical': torch.tensor([info['menopausal_status'], info['hospital']], dtype=torch.float32)
@@ -84,41 +83,9 @@ class MedicalImageDataset(Dataset):
             'mask': mask,
             'label': sample['label'],
             'menopausal_status': sample['menopausal_status'],
-            'filename': sample['filename'],
             'hospital': sample['hospital'],
             'clinical': sample['clinical']
         }
-
-    def display(self, idx):
-        sample = self.__getitem__(idx)
-        image = transforms.ToPILImage()(sample['image'].squeeze(0)) if isinstance(sample['image'], torch.Tensor) else \
-        sample[
-            'image']
-        mask = transforms.ToPILImage()(sample['mask'].squeeze(0)) if sample['mask'] is not None and isinstance(
-            sample['mask'],
-            torch.Tensor) else \
-            sample['mask']
-
-        fig, ax = plt.subplots(1, 2 if mask else 1, figsize=(12, 6))
-
-        title_text = f"({sample['label']})\nHospital: {sample['hospital']}, Menopausal Status: {sample['menopausal_status']}"
-
-        if mask:
-            ax[0].imshow(image, cmap='gray')
-            ax[0].set_title(title_text)
-            ax[0].axis('off')
-
-            ax[1].imshow(image, cmap='gray')
-            ax[1].imshow(mask, cmap='gray', alpha=0.3)
-            ax[1].set_title("With Mask Overlay")
-            ax[1].axis('off')
-        else:
-            ax.imshow(image)
-            ax.set_title(title_text)
-            ax.axis('off')
-
-        plt.tight_layout()
-        plt.show()
 
 
 if __name__ == "__main__":
@@ -126,7 +93,8 @@ if __name__ == "__main__":
         transforms.Resize((336, 544)),
         transforms.ToTensor()
     ])
-    dataset = MedicalImageDataset("../final_datasets/once_more/mtl_final", split="train", transform=transform,
-                                  mask_only=False)
+    dataset = MedicalImageDataset("../final_datasets/once_more/mtl_denoised", split="train", transform=transform,
+                                  mask_only=True)
     for i in range(len(dataset)):
-        print(dataset[i])
+        print(dataset[i]['filename'])
+        print(dataset[i]['menopausal_status'])
