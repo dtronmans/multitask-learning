@@ -27,7 +27,10 @@ def perform_full_test(model, val_transform):
     with torch.no_grad():
         for batch in tqdm(test_loader, desc="Testing"):
             inputs, labels, clinical = batch['image'].to(device), batch['label'].to(device), batch['clinical'].to(device)
-            outputs = model(inputs, clinical)
+            if config.clinical:
+                outputs = model(inputs, clinical)
+            else:
+                outputs = model(inputs)
 
             probs = torch.softmax(outputs, dim=1)
             class1_probs = probs[:, 1]

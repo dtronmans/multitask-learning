@@ -1,4 +1,7 @@
 import json
+import os
+
+from architectures.model_builders import segmentation_architecture, classification_architecture
 
 
 class ConfigError(Exception):
@@ -6,13 +9,14 @@ class ConfigError(Exception):
 
 
 class Config:
-    VALID_TASKS = {"joint", "multitask", "semantic"}
+    VALID_TASKS = {"joint", "classification", "semantic"}
     VALID_MODELS = {"resnet", "efficientnet", "classic"}
 
     def __init__(self, config_path):
         with open(config_path, 'r') as f:
             config_data = json.load(f)
 
+        self.base_path = config_data.get("base_path", "../final_datasets/once_more")
         self.denoised = config_data.get("denoised", False)
         self.cropped = config_data.get("cropped", False)
         self.clinical = config_data.get("clinical", False)
@@ -34,20 +38,19 @@ class Config:
 
     def _assign_dataset_path(self):
         if self.cropped and self.denoised:
-            return "/path/to/cropped_denoised"
+            return os.path.join(self.base_path, "mtl_cropped_denoised")
         elif self.cropped and not self.denoised:
-            return "/path/to/cropped_not_denoised"
+            return os.path.join(self.base_path, "mtl_cropped")
         elif not self.cropped and self.denoised:
-            return "/path/to/not_cropped_denoised"
+            return os.path.join(self.base_path, "mtl_final_denoised")
         else:
-            return "/path/to/not_cropped_not_denoised"
+            return os.path.join(self.base_path, "mtl_final")
 
     def _construct_model(self):
-        # 1) what is the task?
         if self.task == "joint":
             return joint_architecture(self.model, self.clinical)
         elif self.task == "semantic":
-            return semantic_architecture(self.model, self.clinical)
+            return segmentation_architecture(self.model)
         elif self.task == "classification":
             return classification_architecture(self.model, self.clinical)
         else:

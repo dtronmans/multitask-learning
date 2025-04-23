@@ -1,5 +1,3 @@
-from collections import Counter
-
 import torch
 from sklearn.metrics import accuracy_score, recall_score
 from torch import nn, optim
@@ -10,6 +8,7 @@ from tqdm import tqdm
 from architectures.mtl import MTLNet
 from config import Config
 from dataset import MedicalImageDataset
+from test_scripts import perform_full_test
 
 if __name__ == "__main__":
     config = Config("config.json")
@@ -18,9 +17,13 @@ if __name__ == "__main__":
 
     model = MTLNet(1, 1, 2)
     model.to(device)
+    if config.cropped:
+        resize = transforms.Resize((164, 164))
+    else:
+        resize = transforms.Resize((336, 544))
 
     transform = transforms.Compose([
-        transforms.Resize((164, 164)),
+        resize,
         transforms.RandomHorizontalFlip(),
         transforms.RandomRotation(20),
         transforms.RandomAffine(degrees=10, translate=(0.05, 0.05), scale=(0.95, 1.05)),
@@ -32,8 +35,10 @@ if __name__ == "__main__":
         transforms.ToTensor(),
     ])
 
-    train_dataset = MedicalImageDataset("config.dataset_path", split="train", transform=transform)
-    val_dataset = MedicalImageDataset("config.dataset_path", split="val", transform=val_transform)
+    mask_only = config.task == "segmentation"
+
+    train_dataset = MedicalImageDataset("config.dataset_path", split="train", mask_only=mask_only, transform=transform)
+    val_dataset = MedicalImageDataset("config.dataset_path", split="val", mask_only=mask_only, transform=transform)
 
     print("Train dataset length: " + str(len(train_dataset)))
     print("Val dataset length: " + str(len(val_dataset)))
@@ -52,13 +57,13 @@ if __name__ == "__main__":
         train_preds, train_labels = [], []
 
         for batch in tqdm(train_loader):
-            inputs, labels, masks = batch['image'].to(device), batch['label'].to(device), batch['mask'].to(device)
+            inputs, labels, masks, clinical = batch['image'].to(device), batch['label'].to(device), batch['mask'].to(device), batch['clinical'].to(device)
             optimizer.zero_grad()
             seg_logits, class_logits = model(inputs)
             cls_loss = classification_criterion(class_logits, labels)
 
             valid_mask_indices = torch.any(masks != 0, dim=(2, 3)).squeeze(1)
-            if valid_mask_indices.any():
+            if valid_mask_indices.any() and config.task != "classification":
                 valid_seg_logits = seg_logits[valid_mask_indices]
                 valid_masks = masks[valid_mask_indices].float()
                 seg_loss = segmentation_criterion(valid_seg_logits, valid_masks)
@@ -89,7 +94,7 @@ if __name__ == "__main__":
                 cls_loss = classification_criterion(class_logits, labels)
 
                 valid_mask_indices = torch.any(masks != 0, dim=(2, 3))
-                if valid_mask_indices.any():
+                if valid_mask_indices.any() and config.task != "classification":
                     valid_seg_logits = seg_logits[valid_mask_indices]
                     valid_masks = masks[valid_mask_indices].float()
                     seg_loss = segmentation_criterion(valid_seg_logits, valid_masks)
@@ -106,12 +111,14 @@ if __name__ == "__main__":
             val_acc = accuracy_score(val_labels, val_preds)
             val_recall = recall_score(val_labels, val_preds, average='macro')
 
-        print(f"Epoch [{epoch+1}/{num_epochs}] "
-              f"| Train CLS Loss: {train_cls_loss/len(train_loader):.4f} "
-              f"| Train SEG Loss: {train_seg_loss/len(train_loader):.4f} "
+        print(f"Epoch [{epoch + 1}/{num_epochs}] "
+              f"| Train CLS Loss: {train_cls_loss / len(train_loader):.4f} "
+              f"| Train SEG Loss: {train_seg_loss / len(train_loader):.4f} "
               f"| Train Acc: {train_acc:.4f} "
               f"| Train Recall: {train_recall:.4f} "
-              f"|| Val CLS Loss: {val_cls_loss/len(val_loader):.4f} "
-              f"| Val SEG Loss: {val_seg_loss/len(val_loader):.4f} "
+              f"|| Val CLS Loss: {val_cls_loss / len(val_loader):.4f} "
+              f"| Val SEG Loss: {val_seg_loss / len(val_loader):.4f} "
               f"| Val Acc: {val_acc:.4f} "
               f"| Val Recall: {val_recall:.4f}")
+
+    perform_full_test(model, val_transform)
