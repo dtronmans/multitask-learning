@@ -91,15 +91,8 @@ def train(train_dataloader, test_dataloader, model, task, save_path):
                     loss = segmentation_criterion(predicted_seg, masks)
                 elif task == Task.JOINT:
                     cls_loss = classification_criterion(predicted_cls, labels)
-                    valid_mask_indices = (masks.flatten(1).sum(dim=1) > 0)  # shape: (batch_size,)
-
-                    if valid_mask_indices.any():
-                        valid_predicted_seg = predicted_seg[valid_mask_indices]
-                        valid_masks = masks[valid_mask_indices]
-                        seg_loss = segmentation_criterion(valid_predicted_seg, valid_masks)
-                        loss = seg_loss + 0.3 * cls_loss
-                    else:
-                        loss = 0.3 * cls_loss
+                    seg_loss = segmentation_criterion(predicted_seg, masks)
+                    loss = seg_loss + 0.3 * cls_loss
 
                 val_loss += loss.item()
 
@@ -127,6 +120,7 @@ def train(train_dataloader, test_dataloader, model, task, save_path):
 
 
 def return_model(task, backbone):  # here we return the models, with the clinical information
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     if task == Task.JOINT:
         if backbone == Backbone.EFFICIENTNET:
             old_model = EfficientUNetWithClassification(1, 1, 8)
@@ -169,11 +163,6 @@ if __name__ == "__main__":
         transforms.Normalize(mean=[0.5], std=[0.5])
     ])
 
-    val_transform = transforms.Compose([
-        transforms.Resize((336, 544)),
-        transforms.ToTensor(),
-    ])
-
     dataset_path = os.path.join("/exports", "lkeb-hpc", "dzrogmans")
     if denoised:
         dataset_path = os.path.join(dataset_path, "mtl_denoised")
@@ -181,8 +170,8 @@ if __name__ == "__main__":
         dataset_path = os.path.join(dataset_path, "mtl_final")
 
     mask_only = True
-    if task == task.CLASSIFICATION or task == task.JOINT:
-        mask_only = False
+    # if task == task.CLASSIFICATION or task == task.JOINT:
+    #     mask_only = False
 
     model = return_model(task, backbone)
 
