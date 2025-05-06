@@ -174,7 +174,7 @@ if __name__ == "__main__":
         transforms.ToTensor(),
     ])
 
-    dataset_path = os.path.join("..", "final_datasets", "once_more")
+    dataset_path = os.path.join("/exports", "lkeb-hpc", "dzrogmans")
     if denoised:
         dataset_path = os.path.join(dataset_path, "mtl_denoised")
     else:
