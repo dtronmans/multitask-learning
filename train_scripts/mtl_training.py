@@ -39,20 +39,27 @@ def train(train_dataloader, test_dataloader, model, task, save_path):
             optimizer.zero_grad()
             predicted_seg, predicted_cls = model(images, clinical)
 
-            if task == "classification":
+            if task == Task.CLASSIFICATION:
                 loss = classification_criterion(predicted_cls, labels)
-            elif task == "segmentation":
+            elif task == Task.SEGMENTATION:
                 loss = segmentation_criterion(predicted_seg, masks)
             elif task == Task.JOINT:
-                seg_loss = segmentation_criterion(predicted_seg, masks)
                 cls_loss = classification_criterion(predicted_cls, labels)
-                loss = seg_loss + 0.3 * cls_loss
+                valid_mask_indices = (masks.flatten(1).sum(dim=1) > 0)  # shape: (batch_size,)
+
+                if valid_mask_indices.any():
+                    valid_predicted_seg = predicted_seg[valid_mask_indices]
+                    valid_masks = masks[valid_mask_indices]
+                    seg_loss = segmentation_criterion(valid_predicted_seg, valid_masks)
+                    loss = seg_loss + 0.3 * cls_loss
+                else:
+                    loss = 0.3 * cls_loss
             else:
                 raise ValueError(f"Unsupported task type: {task}")
 
             train_loss += loss.item()
 
-            if task in ["classification", "joint"]:
+            if task in [Task.CLASSIFICATION, Task.JOINT]:
                 preds = torch.argmax(predicted_cls, dim=1)
                 correct_train += (preds == labels).sum().item()
                 total_train += labels.size(0)
@@ -78,18 +85,25 @@ def train(train_dataloader, test_dataloader, model, task, save_path):
 
                 predicted_seg, predicted_cls = model(images, clinical)
 
-                if task == "classification":
+                if task == Task.CLASSIFICATION:
                     loss = classification_criterion(predicted_cls, labels)
-                elif task == "segmentation":
+                elif task == Task.SEGMENTATION:
                     loss = segmentation_criterion(predicted_seg, masks)
-                elif task == "joint":
-                    seg_loss = segmentation_criterion(predicted_seg, masks)
+                elif task == Task.JOINT:
                     cls_loss = classification_criterion(predicted_cls, labels)
-                    loss = seg_loss + 0.3 * cls_loss
+                    valid_mask_indices = (masks.flatten(1).sum(dim=1) > 0)  # shape: (batch_size,)
+
+                    if valid_mask_indices.any():
+                        valid_predicted_seg = predicted_seg[valid_mask_indices]
+                        valid_masks = masks[valid_mask_indices]
+                        seg_loss = segmentation_criterion(valid_predicted_seg, valid_masks)
+                        loss = seg_loss + 0.3 * cls_loss
+                    else:
+                        loss = 0.3 * cls_loss
 
                 val_loss += loss.item()
 
-                if task in ["classification", "joint"]:
+                if task in [Task.CLASSIFICATION, Task.JOINT]:
                     preds = torch.argmax(predicted_cls, dim=1)
                     correct_val += (preds == labels).sum().item()
                     total_val += labels.size(0)

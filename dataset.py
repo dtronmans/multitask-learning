@@ -36,6 +36,7 @@ class MultimodalMMOTUDataset(Dataset):
                     cls = int(cls)  # Convert class label to integer directly
                     self.data.append((filename, cls))
 
+
     def __len__(self):
         return len(self.data)
 
@@ -202,5 +203,6 @@ if __name__ == "__main__":
         transforms.ToTensor()
     ])
     dataset = MedicalImageDataset("../final_datasets/once_more/mtl_final", split="test", transform=transform,
-                                  mask_only=True)
-    print(len(dataset))
+                                  mask_only=False)
+    for i in range(len(dataset)):
+        dataset.display(i)
