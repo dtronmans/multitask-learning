@@ -1,3 +1,7 @@
 __pycache__
 *.pt
 .idea
+*.png
+*.tif
+*.jpeg
+*.JPG

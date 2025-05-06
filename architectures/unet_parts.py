@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torchvision.models import efficientnet_b0
-from torchvision.models import resnet18
 
 
 class BasicUNet(nn.Module):
@@ -35,96 +34,30 @@ class BasicUNet(nn.Module):
         x = self.up3(x, x2)
         x = self.up4(x, x1)
         logits = self.outc(x)
-        return logits
+        return logits, None
 
 
-class EfficientUNet(nn.Module):
-    def __init__(self, n_channels, n_classes, bilinear=False):
-        super(EfficientUNet, self).__init__()
-        self.n_channels = n_channels
-        self.n_classes = n_classes
-        self.bilinear = bilinear
+class UpMid(nn.Module):
+    def __init__(self, up_in_channels, skip_channels, out_channels, bilinear=False):
+        super().__init__()
 
-        # Load pretrained EfficientNetB0
-        effnet = efficientnet_b0()
-        features = list(effnet.features.children())
+        if bilinear:
+            self.up = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
+            up_out_channels = up_in_channels  # bilinear doesn't change channels
+        else:
+            up_out_channels = up_in_channels // 2
+            self.up = nn.ConvTranspose2d(up_in_channels, up_out_channels, kernel_size=2, stride=2)
 
-        # We'll use first 4 downsampling blocks
-        self.inc = nn.Sequential(
-            nn.Conv2d(n_channels, 3, kernel_size=1),  # project input to 3 channels if needed
-            features[0]
-        )
-        self.down1 = EfficientDown([features[1]])  # 112 -> 56
-        self.down2 = EfficientDown([features[2]])  # 56 -> 28
-        self.down3 = EfficientDown([features[3]])  # 28 -> 14
-        factor = 2 if bilinear else 1
-        self.down4 = EfficientDown([features[4]])  # 14 -> 7
+        self.conv = DoubleConv(up_out_channels + skip_channels, out_channels)
 
-        # Bottleneck and upsample path remains the same
-        self.up1 = Up(112, 80 // factor, bilinear)  # channels need to match actual output
-        self.up2 = Up(80, 40 // factor, bilinear)
-        self.up3 = Up(40, 24 // factor, bilinear)
-        self.up4 = Up(24, 16, bilinear)
-        self.outc = OutConv(16, n_classes)
-
-    def forward(self, x):
-        x = self.inc(x)
-        x1 = x
-        x2 = self.down1(x1)
-        x3 = self.down2(x2)
-        x4 = self.down3(x3)
-        x5 = self.down4(x4)
-        x = self.up1(x5, x4)
-        x = self.up2(x, x3)
-        x = self.up3(x, x2)
-        x = self.up4(x, x1)
-        logits = self.outc(x)
-        return logits
-
-
-class ResNetUNet(nn.Module):
-    def __init__(self, n_channels, n_classes, bilinear=False):
-        super(ResNetUNet, self).__init__()
-        self.n_channels = n_channels
-        self.n_classes = n_classes
-        self.bilinear = bilinear
-
-        # Load pretrained resnet18
-        base_model = resnet18()
-
-        self.input_conv = nn.Sequential(
-            nn.Conv2d(n_channels, 3, kernel_size=1),
-            base_model.conv1,
-            base_model.bn1,
-            base_model.relu,
-        )
-        self.maxpool = base_model.maxpool
-
-        self.down1 = ResNetDown(base_model.layer1)
-        self.down2 = ResNetDown(base_model.layer2)
-        self.down3 = ResNetDown(base_model.layer3)
-        factor = 2 if bilinear else 1
-        self.down4 = ResNetDown(base_model.layer4)
-
-        self.up1 = Up(512, 256 // factor, bilinear)
-        self.up2 = Up(256, 128 // factor, bilinear)
-        self.up3 = Up(128, 64 // factor, bilinear)
-        self.up4 = Up(64, 64, bilinear)
-        self.outc = OutConv(64, n_classes)
-
-    def forward(self, x):
-        x = self.input_conv(x)
-        x1 = self.maxpool(x)
-        x2 = self.down1(x1)
-        x3 = self.down2(x2)
-        x4 = self.down3(x3)
-        x5 = self.down4(x4)
-        x = self.up1(x5, x4)
-        x = self.up2(x, x3)
-        x = self.up3(x, x2)
-        x = self.up4(x, x1)
-        logits = self.outc(x)
-        return logits
+    def forward(self, x1, x2):
+        x1 = self.up(x1)
+        diffY = x2.size()[2] - x1.size()[2]
+        diffX = x2.size()[3] - x1.size()[3]
+        x1 = F.pad(x1, [diffX // 2, diffX - diffX // 2,
+                        diffY // 2, diffY - diffY // 2])
+        x = torch.cat([x2, x1], dim=1)
+        return self.conv(x)
 
 
 class EfficientDown(nn.Module):
@@ -134,15 +67,6 @@ class EfficientDown(nn.Module):
 
     def forward(self, x):
         return self.blocks(x)
-
-
-class ResNetDown(nn.Module):
-    def __init__(self, block):
-        super().__init__()
-        self.block = block
-
-    def forward(self, x):
-        return self.block(x)
 
 
 class DoubleConv(nn.Module):
@@ -177,32 +101,6 @@ class Down(nn.Module):
         return self.maxpool_conv(x)
 
 
-class UpResidual(nn.Module):
-    def __init__(self, in_channels, out_channels, bilinear=True):
-        super(Up, self).__init__()
-
-        if bilinear:
-            self.up = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
-        else:
-            self.up = nn.ConvTranspose2d(in_channels, in_channels // 2, kernel_size=2, stride=2)
-
-        self.conv = DoubleConv(in_channels, out_channels)
-
-        self.residual = nn.Conv2d(in_channels, out_channels, kernel_size=1)
-
-    def forward(self, x1, x2):
-        x1 = self.up(x1)
-
-        diffY = x2.size()[2] - x1.size()[2]
-        diffX = x2.size()[3] - x1.size()[3]
-        x1 = F.pad(x1, [diffX // 2, diffX - diffX // 2,
-                        diffY // 2, diffY - diffY // 2])
-
-        x = torch.cat([x2, x1], dim=1)
-
-        return self.conv(x) + self.residual(x1)
-
-
 class Up(nn.Module):
 
     def __init__(self, in_channels, out_channels, bilinear=False):
@@ -225,6 +123,29 @@ class Up(nn.Module):
 
         x = torch.cat([x2, x1], dim=1)
 
+        return self.conv(x)
+
+
+class UpMid(nn.Module):
+    def __init__(self, up_in_channels, skip_channels, out_channels, bilinear=False):
+        super().__init__()
+
+        if bilinear:
+            self.up = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
+            up_out_channels = up_in_channels  # bilinear doesn't change channels
+        else:
+            up_out_channels = up_in_channels // 2
+            self.up = nn.ConvTranspose2d(up_in_channels, up_out_channels, kernel_size=2, stride=2)
+
+        self.conv = DoubleConv(up_out_channels + skip_channels, out_channels)
+
+    def forward(self, x1, x2):
+        x1 = self.up(x1)
+        diffY = x2.size()[2] - x1.size()[2]
+        diffX = x2.size()[3] - x1.size()[3]
+        x1 = F.pad(x1, [diffX // 2, diffX - diffX // 2,
+                        diffY // 2, diffY - diffY // 2])
+        x = torch.cat([x2, x1], dim=1)
         return self.conv(x)
 
 

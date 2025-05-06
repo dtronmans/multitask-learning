@@ -1,5 +1,5 @@
 from torch import nn
-from torchvision.models import efficientnet_b0
+from torchvision.models import efficientnet_b0, EfficientNet_B0_Weights
 
 from architectures.unet_parts import EfficientDown, UpMid, OutConv
 
@@ -11,7 +11,7 @@ class EfficientUNet(nn.Module):
         self.n_classes = n_classes
         self.bilinear = bilinear
 
-        effnet = efficientnet_b0()
+        effnet = efficientnet_b0(weights=EfficientNet_B0_Weights.IMAGENET1K_V1)
         features = list(effnet.features.children())
 
         self.inc = nn.Sequential(
@@ -45,9 +45,9 @@ class EfficientUNet(nn.Module):
         x4 = self.down3(x3)  # x4 shape now: 40 x 42 x 68
         x5 = self.down4(x4)  # x5 shape now: 80 x 21 x 34
 
-        x5 = self.deep_blocks(x5)
+        x6 = self.deep_blocks(x5)
 
-        x = self.up1(x5, x4)
+        x = self.up1(x6, x4)
         x = self.up2(x, x3)
         x = self.up3(x, x2)
         x = self.up4(x, x1)

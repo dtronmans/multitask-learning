@@ -2,10 +2,10 @@
   "base_path": "../final_datasets/once_more",
   "denoised": false,
   "cropped": false,
-  "clinical": false,
-  "model": "resnet",
+  "clinical": true,
+  "model": "efficientnet",
   "task": "classification",
   "batch_size": 8,
-  "num_epochs": 100,
+  "num_epochs": 30,
   "learning_rate": 0.001
 }

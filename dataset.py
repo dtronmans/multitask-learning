@@ -1,12 +1,59 @@
 import os
 import random
 
+import numpy as np
 import pandas as pd
 from PIL import Image
 import torch
 from torch.utils.data import Dataset
 from torchvision import transforms
 import matplotlib.pyplot as plt
+
+
+class MultimodalMMOTUDataset(Dataset):
+    def __init__(self, dataset_path, phase="train", transforms=None, mask_transforms=None):
+        self.dataset_path = dataset_path
+        self.transforms = transforms
+        self.mask_transforms = mask_transforms
+        self.images_dir = os.path.join(dataset_path, "images")
+        self.masks_dir = os.path.join(dataset_path, "annotations")
+        self.num_classes = 8
+
+        if phase == 'train':
+            data_file = 'train_cls.txt'
+        elif phase == 'val':
+            data_file = 'val_cls.txt'
+        elif phase == 'test':
+            data_file = 'test_cls.txt'
+        else:
+            raise ValueError("Invalid phase specified. Choose 'train' or 'val'.")
+
+        self.data = []
+        with open(os.path.join(dataset_path, data_file), 'r') as file:
+            for line in file:
+                filename, cls = line.strip().split()
+                if os.path.exists(os.path.join(self.images_dir, filename)) and filename != "3.JPG":
+                    cls = int(cls)  # Convert class label to integer directly
+                    self.data.append((filename, cls))
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, index):
+        filename, label = self.data[index]
+        img_path = os.path.join(self.images_dir, filename)
+        mask_filename = os.path.splitext(filename)[0] + ".PNG"
+        mask_path = os.path.join(self.masks_dir, mask_filename)
+
+        image = Image.open(img_path).convert('L')
+        mask = Image.open(mask_path).convert('L') if os.path.exists(mask_path) else None
+
+        if self.transforms:
+            image = self.transforms(image)
+        if self.mask_transforms and mask is not None:
+            mask = self.mask_transforms(mask)
+
+        return image, torch.tensor(label, dtype=torch.long), mask
 
 
 class MedicalImageDataset(Dataset):
@@ -23,7 +70,7 @@ class MedicalImageDataset(Dataset):
         # Load filenames for the current split (train.txt, val.txt, test.txt)
         split_file = os.path.join(root_dir, f'{split}.txt')
         with open(split_file, 'r') as f:
-            split_filenames = [line.strip().replace('\\', os.sep) for line in f]
+            split_filenames = [line.strip() for line in f]
 
         # Create a mapping from Study ID to clinical info
         clinical_info = {}
@@ -41,8 +88,9 @@ class MedicalImageDataset(Dataset):
 
             image_path = os.path.join(self.images_dir, rel_path)
             mask_path = os.path.join(self.masks_dir, rel_path)
+            alternate_mask_path = os.path.join(self.masks_dir, rel_path.replace("tif", "png"))
 
-            if self.mask_only and not os.path.exists(mask_path):
+            if self.mask_only and not os.path.exists(mask_path) and not os.path.exists(alternate_mask_path):
                 continue
 
             base_id = filename.split('_')[0]
@@ -51,12 +99,19 @@ class MedicalImageDataset(Dataset):
             if info['hospital'] == "Unknown":
                 print(f"Warning: Missing clinical info for {filename}")
 
+            if os.path.exists(mask_path):
+                mp = mask_path
+            elif os.path.exists(alternate_mask_path):
+                mp = alternate_mask_path
+            else:
+                mp = None
+
             self.samples.append({
                 'image_path': image_path,
-                'mask_path': mask_path if os.path.exists(mask_path) else None,
+                'mask_path': mp,
                 'label': 0 if label == "benign" else 1,
-                'menopausal_status': info['menopausal_status'],
-                'hospital': info['hospital'],
+                'menopausal_status': torch.tensor(info['menopausal_status'], dtype=torch.float32),
+                'hospital': torch.tensor(info['hospital'], dtype=torch.float32),
                 'clinical': torch.tensor([info['menopausal_status'], info['hospital']], dtype=torch.float32)
             })
         self.samples = self.samples[::-1]
@@ -86,6 +141,59 @@ class MedicalImageDataset(Dataset):
             'hospital': sample['hospital'],
             'clinical': sample['clinical']
         }
+    def display(self, idx):
+        sample = self[idx]
+        image = sample['image'].squeeze().numpy()
+        mask = sample['mask'].squeeze().numpy()
+        filename = os.path.basename(self.samples[idx]['image_path'])
+
+        fig, axs = plt.subplots(1, 2, figsize=(10, 5))
+        fig.suptitle(f"Filename: {filename}", fontsize=14)
+
+        # Original image
+        axs[0].imshow(image, cmap='gray')
+        axs[0].set_title("Original Image")
+        axs[0].axis('off')
+
+        # Image with semi-transparent mask overlay
+        axs[1].imshow(image, cmap='gray')
+        axs[1].imshow(mask, cmap='Reds', alpha=0.2)  # Alpha controls transparency
+        axs[1].set_title("Image with Mask Overlay")
+        axs[1].axis('off')
+
+        plt.tight_layout()
+        plt.show()
+
+    def save(self, output_dir):
+        os.makedirs(output_dir, exist_ok=True)
+
+        for idx in range(len(self.samples)):
+            sample = self[idx]
+            image = sample['image'].squeeze().numpy()
+            mask = sample['mask'].squeeze().numpy()
+            filename = os.path.basename(self.samples[idx]['image_path'])
+            filename_without_ext = os.path.splitext(filename)[0]
+
+            fig, axs = plt.subplots(1, 2, figsize=(10, 5))
+            fig.suptitle(f"Filename: {filename}", fontsize=14)
+
+            # Original image
+            axs[0].imshow(image, cmap='gray')
+            axs[0].set_title("Original Image")
+            axs[0].axis('off')
+
+            # Image with semi-transparent mask overlay
+            axs[1].imshow(image, cmap='gray')
+            axs[1].imshow(mask, cmap='Reds', alpha=0.2)
+            axs[1].set_title("Image with Mask Overlay")
+            axs[1].axis('off')
+
+            plt.tight_layout()
+
+            # Save the figure
+            save_path = os.path.join(output_dir, f"{filename_without_ext}_overlay.png")
+            plt.savefig(save_path)
+            plt.close(fig)  # Very important to prevent memory leaks when saving lots of images
 
 
 if __name__ == "__main__":
@@ -93,8 +201,6 @@ if __name__ == "__main__":
         transforms.Resize((336, 544)),
         transforms.ToTensor()
     ])
-    dataset = MedicalImageDataset("../final_datasets/once_more/mtl_denoised", split="train", transform=transform,
+    dataset = MedicalImageDataset("../final_datasets/once_more/mtl_final", split="test", transform=transform,
                                   mask_only=True)
-    for i in range(len(dataset)):
-        print(dataset[i]['filename'])
-        print(dataset[i]['menopausal_status'])
+    print(len(dataset))

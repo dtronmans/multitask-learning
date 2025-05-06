@@ -1,44 +1,182 @@
+import os
+
 import torch
-from sklearn.metrics import accuracy_score, recall_score
 from torch import nn, optim
 from torch.utils.data import DataLoader
 from torchvision import transforms
 from tqdm import tqdm
+import numpy as np
 
-from architectures.mtl import MTLNet
-from config import Config
+from architectures.mtl.efficientnet_with_classification import EfficientUNetWithClassification, \
+    transfer_weights_to_clinical_model, EfficientUNetWithClinicalClassification
 from dataset import MedicalImageDataset
-from test_scripts import perform_full_test
+from enums import Backbone, Task
+from train_scripts.losses import DiceLossWithSigmoid
+
+
+def train(train_dataloader, test_dataloader, model, task, save_path):
+    print("Task: " + str(task))
+    class_weights = torch.tensor([1.0, 2.0]).to(device)
+    classification_criterion = nn.CrossEntropyLoss(weight=class_weights)
+    segmentation_criterion = DiceLossWithSigmoid()
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    best_val_loss = np.inf
+    for epoch in range(num_epochs):
+        print(f"\nEpoch {epoch + 1}/{num_epochs}")
+        print("-" * 20)
+
+        model.train()
+        train_loss = 0.0
+        correct_train = 0
+        total_train = 0
+
+        for batch in tqdm(train_dataloader, desc="Training", leave=True):
+            images, labels, masks, clinical = batch['image'].to(device), batch['label'].to(device), \
+                batch['mask'].to(device), batch['clinical'].to(
+                device)
+            masks = (masks > 0).float()
+
+            optimizer.zero_grad()
+            predicted_seg, predicted_cls = model(images, clinical)
+
+            if task == "classification":
+                loss = classification_criterion(predicted_cls, labels)
+            elif task == "segmentation":
+                loss = segmentation_criterion(predicted_seg, masks)
+            elif task == Task.JOINT:
+                seg_loss = segmentation_criterion(predicted_seg, masks)
+                cls_loss = classification_criterion(predicted_cls, labels)
+                loss = seg_loss + 0.3 * cls_loss
+            else:
+                raise ValueError(f"Unsupported task type: {task}")
+
+            train_loss += loss.item()
+
+            if task in ["classification", "joint"]:
+                preds = torch.argmax(predicted_cls, dim=1)
+                correct_train += (preds == labels).sum().item()
+                total_train += labels.size(0)
+
+            loss.backward()
+            optimizer.step()
+
+        avg_train_loss = train_loss / len(train_dataloader)
+        train_accuracy = 100 * correct_train / total_train if total_train > 0 else 0
+
+        # Validation
+        model.eval()
+        val_loss = 0.0
+        correct_val = 0
+        total_val = 0
+
+        with torch.no_grad():
+            for batch in tqdm(test_dataloader, desc="Validation", leave=True):
+                images, labels, masks, clinical = batch['image'].to(device), batch['label'].to(device), \
+                    batch['mask'].to(device), batch['clinical'].to(
+                    device)
+                masks = (masks > 0).float()
+
+                predicted_seg, predicted_cls = model(images, clinical)
+
+                if task == "classification":
+                    loss = classification_criterion(predicted_cls, labels)
+                elif task == "segmentation":
+                    loss = segmentation_criterion(predicted_seg, masks)
+                elif task == "joint":
+                    seg_loss = segmentation_criterion(predicted_seg, masks)
+                    cls_loss = classification_criterion(predicted_cls, labels)
+                    loss = seg_loss + 0.3 * cls_loss
+
+                val_loss += loss.item()
+
+                if task in ["classification", "joint"]:
+                    preds = torch.argmax(predicted_cls, dim=1)
+                    correct_val += (preds == labels).sum().item()
+                    total_val += labels.size(0)
+
+        avg_val_loss = val_loss / len(test_dataloader)
+        val_accuracy = 100 * correct_val / total_val if total_val > 0 else 0
+
+        if avg_val_loss < best_val_loss:
+            print("Saving best model so far!")
+            best_val_loss = avg_val_loss
+            torch.save(model.state_dict(), save_path + "intermediate.pt")
+
+        print(f"Epoch {epoch + 1}/{num_epochs} - Train Loss: {avg_train_loss:.4f} - Val Loss: {avg_val_loss:.4f}")
+
+        if task in ["classification", "joint"]:
+            print(f"Train Accuracy: {train_accuracy:.2f}% - Val Accuracy: {val_accuracy:.2f}%")
+
+    # Final model save
+    print("Training complete.")
+    torch.save(model.state_dict(), save_path + "final.pt")
+
+
+def return_model(task, backbone):  # here we return the models, with the clinical information
+    if task == Task.JOINT:
+        if backbone == Backbone.EFFICIENTNET:
+            old_model = EfficientUNetWithClassification(1, 1, 8)
+            old_model.load_state_dict(
+                torch.load("models/mmotu/joint/efficientnet_joint.pt", weights_only=True,
+                           map_location=torch.device(device)))
+            new_model = EfficientUNetWithClinicalClassification(1, 1, 2)
+            new_model = transfer_weights_to_clinical_model(old_model, new_model)
+            new_model.to(device)
+            return new_model
+
+
+def construct_save_path(denoised, backbone, task):
+    final_str = "hospital_"
+    if backbone == Backbone.CLASSIC:
+        final_str += "classic_"
+    elif backbone == Backbone.EFFICIENTNET:
+        final_str += "efficientnet_"
+    if task == Task.JOINT:
+        final_str += "joint"
+    elif task == Task.CLASSIFICATION:
+        final_str += "classification"
+    elif task == Task.SEGMENTATION:
+        final_str += "segmentation"
+    if denoised is True:
+        final_str += "_denoised"
+    return final_str + ".pt"
+
 
 if __name__ == "__main__":
-    config = Config("config.json")
-    num_epochs, batch_size, learning_rate = config.num_epochs, config.batch_size, config.learning_rate
+    denoised = False
+    backbone = Backbone.EFFICIENTNET
+    task = Task.JOINT
+    num_epochs, batch_size, learning_rate = 80, 2, 0.001
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    model = MTLNet(1, 1, 2)
-    model.to(device)
-    if config.cropped:
-        resize = transforms.Resize((164, 164))
-    else:
-        resize = transforms.Resize((336, 544))
-
     transform = transforms.Compose([
-        resize,
-        transforms.RandomHorizontalFlip(),
-        transforms.RandomRotation(20),
-        transforms.RandomAffine(degrees=10, translate=(0.05, 0.05), scale=(0.95, 1.05)),
+        transforms.Resize((336, 544)),
         transforms.ToTensor(),
+        transforms.Normalize(mean=[0.5], std=[0.5])
     ])
 
     val_transform = transforms.Compose([
-        transforms.Resize((164, 164)),
+        transforms.Resize((336, 544)),
         transforms.ToTensor(),
     ])
 
-    mask_only = config.task == "segmentation"
+    dataset_path = os.path.join("..", "final_datasets", "once_more")
+    if denoised:
+        dataset_path = os.path.join(dataset_path, "mtl_denoised")
+    else:
+        dataset_path = os.path.join(dataset_path, "mtl_final")
 
-    train_dataset = MedicalImageDataset("config.dataset_path", split="train", mask_only=mask_only, transform=transform)
-    val_dataset = MedicalImageDataset("config.dataset_path", split="val", mask_only=mask_only, transform=transform)
+    mask_only = True
+    if task == task.CLASSIFICATION or task == task.JOINT:
+        mask_only = False
+
+    model = return_model(task, backbone)
+
+    save_path = construct_save_path(denoised, backbone, task)
+    print("Save path: " + save_path)
+
+    train_dataset = MedicalImageDataset(dataset_path, split="train", mask_only=mask_only, transform=transform)
+    val_dataset = MedicalImageDataset(dataset_path, split="val", mask_only=mask_only, transform=transform)
 
     print("Train dataset length: " + str(len(train_dataset)))
     print("Val dataset length: " + str(len(val_dataset)))
@@ -46,79 +184,4 @@ if __name__ == "__main__":
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 
-    class_weights = torch.tensor([1.0, 2.0]).to(device)
-    classification_criterion = nn.CrossEntropyLoss(weight=class_weights)
-    segmentation_criterion = nn.BCEWithLogitsLoss()
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-
-    for epoch in range(num_epochs):
-        model.train()
-        train_cls_loss, train_seg_loss = 0.0, 0.0
-        train_preds, train_labels = [], []
-
-        for batch in tqdm(train_loader):
-            inputs, labels, masks, clinical = batch['image'].to(device), batch['label'].to(device), batch['mask'].to(device), batch['clinical'].to(device)
-            optimizer.zero_grad()
-            seg_logits, class_logits = model(inputs)
-            cls_loss = classification_criterion(class_logits, labels)
-
-            valid_mask_indices = torch.any(masks != 0, dim=(2, 3)).squeeze(1)
-            if valid_mask_indices.any() and config.task != "classification":
-                valid_seg_logits = seg_logits[valid_mask_indices]
-                valid_masks = masks[valid_mask_indices].float()
-                seg_loss = segmentation_criterion(valid_seg_logits, valid_masks)
-            else:
-                seg_loss = torch.tensor(0.0, device=device)
-
-            total_loss = cls_loss + seg_loss
-            total_loss.backward()
-            optimizer.step()
-
-            train_cls_loss += cls_loss.item()
-            train_seg_loss += seg_loss.item()
-
-            _, predicted = torch.max(class_logits, 1)
-            train_preds.extend(predicted.cpu().numpy())
-            train_labels.extend(labels.cpu().numpy())
-
-        train_acc = accuracy_score(train_labels, train_preds)
-        train_recall = recall_score(train_labels, train_preds, average='macro')
-
-        model.eval()
-        val_cls_loss, val_seg_loss = 0.0, 0.0
-        val_preds, val_labels = [], []
-        with torch.no_grad():
-            for batch in tqdm(val_loader):
-                inputs, labels, masks = batch['image'].to(device), batch['label'].to(device), batch['mask'].to(device)
-                seg_logits, class_logits = model(inputs)
-                cls_loss = classification_criterion(class_logits, labels)
-
-                valid_mask_indices = torch.any(masks != 0, dim=(2, 3))
-                if valid_mask_indices.any() and config.task != "classification":
-                    valid_seg_logits = seg_logits[valid_mask_indices]
-                    valid_masks = masks[valid_mask_indices].float()
-                    seg_loss = segmentation_criterion(valid_seg_logits, valid_masks)
-                else:
-                    seg_loss = torch.tensor(0.0, device=device)
-
-                val_cls_loss += cls_loss.item()
-                val_seg_loss += seg_loss.item()
-
-                _, predicted = torch.max(class_logits, 1)
-                val_preds.extend(predicted.cpu().numpy())
-                val_labels.extend(labels.cpu().numpy())
-
-            val_acc = accuracy_score(val_labels, val_preds)
-            val_recall = recall_score(val_labels, val_preds, average='macro')
-
-        print(f"Epoch [{epoch + 1}/{num_epochs}] "
-              f"| Train CLS Loss: {train_cls_loss / len(train_loader):.4f} "
-              f"| Train SEG Loss: {train_seg_loss / len(train_loader):.4f} "
-              f"| Train Acc: {train_acc:.4f} "
-              f"| Train Recall: {train_recall:.4f} "
-              f"|| Val CLS Loss: {val_cls_loss / len(val_loader):.4f} "
-              f"| Val SEG Loss: {val_seg_loss / len(val_loader):.4f} "
-              f"| Val Acc: {val_acc:.4f} "
-              f"| Val Recall: {val_recall:.4f}")
-
-    perform_full_test(model, val_transform)
+    train(train_loader, val_loader, model, task, save_path)
