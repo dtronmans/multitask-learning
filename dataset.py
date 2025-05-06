@@ -71,7 +71,7 @@ class MedicalImageDataset(Dataset):
         # Load filenames for the current split (train.txt, val.txt, test.txt)
         split_file = os.path.join(root_dir, f'{split}.txt')
         with open(split_file, 'r') as f:
-            split_filenames = [line.strip() for line in f]
+            split_filenames = [line.strip().replace('\\', '/') for line in f]
 
         # Create a mapping from Study ID to clinical info
         clinical_info = {}
