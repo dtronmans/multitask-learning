@@ -153,14 +153,14 @@ def construct_save_path(denoised, backbone, task):
         final_str += "segmentation"
     if denoised is True:
         final_str += "_denoised"
-    return final_str + ".pt"
+    return final_str
 
 
 if __name__ == "__main__":
     denoised = False
     backbone = Backbone.EFFICIENTNET
     task = Task.JOINT
-    num_epochs, batch_size, learning_rate = 80, 2, 0.001
+    num_epochs, batch_size, learning_rate = 80, 8, 0.001
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     transform = transforms.Compose([
