@@ -7,6 +7,7 @@ from torchvision import transforms
 from tqdm import tqdm
 import numpy as np
 
+from architectures.model_builder import return_model
 from architectures.mtl.efficientnet_with_classification import EfficientUNetWithClassification, \
     transfer_weights_to_clinical_model, EfficientUNetWithClinicalClassification
 from dataset import MedicalImageDataset
@@ -119,20 +120,6 @@ def train(train_dataloader, test_dataloader, model, task, save_path):
     torch.save(model.state_dict(), save_path + "final.pt")
 
 
-def return_model(task, backbone):  # here we return the models, with the clinical information
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    if task == Task.JOINT:
-        if backbone == Backbone.EFFICIENTNET:
-            old_model = EfficientUNetWithClassification(1, 1, 8)
-            old_model.load_state_dict(
-                torch.load("models/mmotu/joint/efficientnet_joint.pt", weights_only=True,
-                           map_location=torch.device(device)))
-            new_model = EfficientUNetWithClinicalClassification(1, 1, 2)
-            new_model = transfer_weights_to_clinical_model(old_model, new_model)
-            new_model.to(device)
-            return new_model
-
-
 def construct_save_path(denoised, backbone, task):
     final_str = "hospital_"
     if backbone == Backbone.CLASSIC:
@@ -153,7 +140,7 @@ def construct_save_path(denoised, backbone, task):
 if __name__ == "__main__":
     denoised = False
     backbone = Backbone.EFFICIENTNET
-    task = Task.JOINT
+    task = Task.CLASSIFICATION
     num_epochs, batch_size, learning_rate = 80, 8, 0.001
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -163,15 +150,15 @@ if __name__ == "__main__":
         transforms.Normalize(mean=[0.5], std=[0.5])
     ])
 
-    dataset_path = os.path.join("/exports", "lkeb-hpc", "dzrogmans")
+    dataset_path = os.path.join("..", "final_datasets", "once_more")
     if denoised:
         dataset_path = os.path.join(dataset_path, "mtl_denoised")
     else:
         dataset_path = os.path.join(dataset_path, "mtl_final")
 
     mask_only = True
-    # if task == task.CLASSIFICATION or task == task.JOINT:
-    #     mask_only = False
+    if task == task.CLASSIFICATION or task == task.JOINT:
+        mask_only = False
 
     model = return_model(task, backbone)
 

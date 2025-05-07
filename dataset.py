@@ -110,12 +110,12 @@ class MedicalImageDataset(Dataset):
             self.samples.append({
                 'image_path': image_path,
                 'mask_path': mp,
-                'label': 0 if label == "benign" else 1,
+                'label': 0 if label.startswith("benign") else 1,
                 'menopausal_status': torch.tensor(info['menopausal_status'], dtype=torch.float32),
                 'hospital': torch.tensor(info['hospital'], dtype=torch.float32),
                 'clinical': torch.tensor([info['menopausal_status'], info['hospital']], dtype=torch.float32)
             })
-        self.samples = self.samples[::-1]
+        # self.samples = self.samples[::-1]
 
     def __len__(self):
         return len(self.samples)
@@ -202,7 +202,7 @@ if __name__ == "__main__":
         transforms.Resize((336, 544)),
         transforms.ToTensor()
     ])
-    dataset = MedicalImageDataset("../final_datasets/once_more/mtl_final", split="test", transform=transform,
-                                  mask_only=False)
+    dataset = MedicalImageDataset("../final_datasets/once_more/mtl_final", split="train", transform=transform,
+                                  mask_only=True)
     for i in range(len(dataset)):
         dataset.display(i)
