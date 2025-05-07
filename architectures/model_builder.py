@@ -35,9 +35,9 @@ def return_model(task, backbone):  # here we return the models, with the clinica
             )
             efficientnet_model.load_state_dict(
                 torch.load("models/mmotu/classification/efficientnet_classification_intermediate.pt", weights_only=True,
-                           map_location=torch.device("cpu")))
-
+                           map_location=torch.device(device)))
             model = EfficientNetClinical(efficientnet_model, num_classes=2)
+            model.to(device)
             return model
     if task == Task.SEGMENTATION:
         if backbone == Backbone.EFFICIENTNET:
