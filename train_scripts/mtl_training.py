@@ -112,7 +112,7 @@ def train(train_dataloader, test_dataloader, model, task, save_path):
 
         print(f"Epoch {epoch + 1}/{num_epochs} - Train Loss: {avg_train_loss:.4f} - Val Loss: {avg_val_loss:.4f}")
 
-        if task in ["classification", "joint"]:
+        if task in [Task.CLASSIFICATION, Task.JOINT]:
             print(f"Train Accuracy: {train_accuracy:.2f}% - Val Accuracy: {val_accuracy:.2f}%")
 
     # Final model save
