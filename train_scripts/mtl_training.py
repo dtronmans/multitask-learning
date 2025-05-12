@@ -154,7 +154,7 @@ if __name__ == "__main__":
     transform = transforms.Compose([
         transforms.Resize((336, 544)),
         transforms.ToTensor(),
-        transforms.Normalize(mean=[0.5], std=[0.5])
+        transforms.Normalize(mean=[0.17], std=[0.21])
     ])
 
     dataset_path = os.path.join("/exports", "lkeb-hpc", "dzrogmans")
