@@ -40,7 +40,7 @@ def return_model(task, backbone, denoised=False):  # here we return the models, 
                 padding=original_conv.padding,
                 bias=original_conv.bias is not None
             )
-            base_path = os.path.join("/exports", "lkeb-hpc", "dzrogmans", "models", "mmotu", "segmentation")
+            base_path = os.path.join("/exports", "lkeb-hpc", "dzrogmans", "models", "mmotu", "classification")
             if denoised:
                 base_path = os.path.join(base_path, "efficientnet_classification_denoised.pt")
             else:
