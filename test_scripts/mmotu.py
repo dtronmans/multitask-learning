@@ -9,6 +9,7 @@ from architectures.classification_only.unet_classification_only import UNetClass
 from architectures.mtl.efficientnet_with_classification import EfficientUNetWithClassification
 from architectures.mtl.unet_with_classification import UNetWithClassification
 from architectures.segmentation_only.efficientnet_only_segmentation import EfficientUNet
+from architectures.unet_parts import BasicUNet
 from dataset import MultimodalMMOTUDataset
 
 

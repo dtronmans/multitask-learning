@@ -100,10 +100,10 @@ class MedicalImageDataset(Dataset):
             if info['hospital'] == "Unknown":
                 print(f"Warning: Missing clinical info for {filename}")
 
-            if os.path.exists(mask_path):
-                mp = mask_path
-            elif os.path.exists(alternate_mask_path):
+            if os.path.exists(alternate_mask_path): # here, we prioritize png (our) masks
                 mp = alternate_mask_path
+            elif os.path.exists(mask_path):
+                mp = mask_path
             else:
                 mp = None
 

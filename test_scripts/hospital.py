@@ -72,8 +72,8 @@ if __name__ == "__main__":
     task = Task.JOINT
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     mask_only = True
-    # if task == task.CLASSIFICATION or task == task.JOINT:
-    #     mask_only = False
+    if task == task.CLASSIFICATION or task == task.JOINT:
+        mask_only = False
 
     transform = transforms.Compose([
         transforms.Resize((336, 544)),

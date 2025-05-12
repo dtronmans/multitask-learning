@@ -6,7 +6,8 @@ from architectures.unet_parts import EfficientDown, UpMid, OutConv
 
 
 class EfficientUNetWithClinicalClassification(nn.Module):
-    def __init__(self, n_channels, n_segmentation_classes, num_classification_classes=2, clinical_feature_dim=2, bilinear=False):
+    def __init__(self, n_channels, n_segmentation_classes, num_classification_classes=2, clinical_feature_dim=2,
+                 bilinear=False):
         super(EfficientUNetWithClinicalClassification, self).__init__()
         self.n_channels = n_channels
         self.n_classes = n_segmentation_classes
@@ -79,7 +80,7 @@ class EfficientUNetWithClinicalClassification(nn.Module):
         pooled = self.global_avg_pool(x6).view(x6.size(0), -1)  # shape: (B, 320)
 
         menopause = clinical_features[:, 0:1]  # shape [B, 1]
-        hospital = clinical_features[:, 1:2]   # shape [B, 1]
+        hospital = clinical_features[:, 1:2]  # shape [B, 1]
 
         gate_value = self.gate(hospital)
         gated_menopause = gate_value * menopause
@@ -138,47 +139,34 @@ class EfficientUNetWithClassification(nn.Module):
         self.bilinear = bilinear
 
         effnet = efficientnet_b0(weights=EfficientNet_B0_Weights.IMAGENET1K_V1)
+
+        # Save the avgpool and classifier for later reuse
+        self.global_avg_pool = effnet.avgpool
+        self.classification_head = effnet.classifier
+
+        # Replace final classifier's output to match your class count
+        self.classification_head[1] = nn.Linear(1280, num_classification_classes)
+
         features = list(effnet.features.children())
 
         self.inc = nn.Sequential(
-            nn.Conv2d(n_channels, 3, kernel_size=1),  # Project input to 3 channels
+            nn.Conv2d(n_channels, 3, kernel_size=1),
             features[0]
         )
-        self.down1 = EfficientDown([features[1]])  # output: 16 channels
-        self.down2 = EfficientDown([features[2]])  # output: 24 channels
-        self.down3 = EfficientDown([features[3]])  # output: 40 channels
-        self.down4 = EfficientDown([features[4]])  # output: 80 channels
+        self.down1 = EfficientDown([features[1]])  # 16 channels
+        self.down2 = EfficientDown([features[2]])  # 24 channels
+        self.down3 = EfficientDown([features[3]])  # 40 channels
+        self.down4 = EfficientDown([features[4]])  # 80 channels
 
-        self.deep_blocks = nn.Sequential(features[5], features[6], features[7])  # final: 320 channels
+        self.deep_blocks = nn.Sequential(features[5], features[6], features[7], features[8])  # Output: 320 channels
 
         # Segmentation decoder
-        self.up1 = UpMid(320, 40, 40, bilinear)
+        self.up1 = UpMid(1280, 40, 40, bilinear)
         self.up2 = UpMid(40, 24, 24, bilinear)
         self.up3 = UpMid(24, 16, 16, bilinear)
         self.up4 = UpMid(16, 32, 32, bilinear)
         self.final_up = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
         self.outc = OutConv(32, n_segmentation_classes)
-
-        # Classification branch
-        self.classification_conv_1 = nn.Sequential(
-            nn.Conv2d(320, 128, kernel_size=1),
-            nn.BatchNorm2d(128),
-            nn.ReLU()
-        )
-        self.classification_conv_2 = nn.Sequential(
-            nn.Conv2d(80, 128, kernel_size=1),
-            nn.BatchNorm2d(128),
-            nn.ReLU()
-        )
-        self.global_avg_pool = nn.AdaptiveAvgPool2d(1)
-
-        self.classification_head = nn.Sequential(
-            nn.Flatten(),
-            nn.Linear(320, 128),
-            nn.ReLU(),
-            nn.Dropout(0.3),
-            nn.Linear(128, num_classification_classes)
-        )
 
     def forward(self, x):
         x = self.inc(x)
@@ -198,8 +186,9 @@ class EfficientUNetWithClassification(nn.Module):
         x_seg = self.final_up(x_seg)
         seg_logits = self.outc(x_seg)
 
-        pooled = self.global_avg_pool(x6).view(x6.size(0), -1)
-        class_logits = self.classification_head(pooled)
+        # Classification path (same as EfficientNet-B0)
+        pooled = self.global_avg_pool(x6)
+        class_logits = self.classification_head(pooled.flatten(1))
 
         return seg_logits, class_logits
 
