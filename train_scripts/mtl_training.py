@@ -108,7 +108,7 @@ def train(train_dataloader, test_dataloader, model, task, save_path):
         if avg_val_loss < best_val_loss:
             print("Saving best model so far!")
             best_val_loss = avg_val_loss
-            torch.save(model.state_dict(), save_path)
+            torch.save(model.state_dict(), save_path + ".pt")
 
         print(f"Epoch {epoch + 1}/{num_epochs} - Train Loss: {avg_train_loss:.4f} - Val Loss: {avg_val_loss:.4f}")
 
@@ -170,6 +170,8 @@ if __name__ == "__main__":
 
     print("Train dataset length: " + str(len(train_dataset)))
     print("Val dataset length: " + str(len(val_dataset)))
+
+    print("Denoised: " + str(denoised))
 
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
