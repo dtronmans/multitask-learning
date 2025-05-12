@@ -13,10 +13,10 @@ class EfficientUNetWithClinicalClassification(nn.Module):
         self.n_classes = n_segmentation_classes
         self.bilinear = bilinear
 
-        # Feature extractor backbone
         effnet = efficientnet_b0(weights=EfficientNet_B0_Weights.IMAGENET1K_V1)
         features = list(effnet.features.children())
 
+        # EfficientNet Encoder
         self.inc = nn.Sequential(
             nn.Conv2d(n_channels, 3, kernel_size=1),
             features[0]
@@ -25,9 +25,12 @@ class EfficientUNetWithClinicalClassification(nn.Module):
         self.down2 = EfficientDown([features[2]])
         self.down3 = EfficientDown([features[3]])
         self.down4 = EfficientDown([features[4]])
-        self.deep_blocks = nn.Sequential(features[5], features[6], features[7])
+        self.deep_blocks = nn.Sequential(features[5], features[6], features[7])  # output: 320 channels
 
-        # Segmentation decoder (unchanged)
+        # Save the classification expansion block (320 → 1280)
+        self.classification_conv = features[8]  # EfficientNet's final conv block
+
+        # Segmentation decoder
         self.up1 = UpMid(320, 40, 40, bilinear)
         self.up2 = UpMid(40, 24, 24, bilinear)
         self.up3 = UpMid(24, 16, 16, bilinear)
@@ -36,16 +39,15 @@ class EfficientUNetWithClinicalClassification(nn.Module):
         self.outc = OutConv(32, n_segmentation_classes)
 
         # Classification branch
-        self.global_avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.global_avg_pool = effnet.avgpool  # AdaptiveAvgPool2d(1)
 
         self.gate = nn.Sequential(
-            nn.Linear(1, 8),  # input: hospital feature only
+            nn.Linear(1, 8),
             nn.ReLU(),
             nn.Linear(8, 1),
             nn.Sigmoid()
         )
 
-        # Project transformed clinical features
         self.clinical_proj = nn.Sequential(
             nn.Linear(clinical_feature_dim, 64),
             nn.ReLU(),
@@ -53,23 +55,24 @@ class EfficientUNetWithClinicalClassification(nn.Module):
             nn.ReLU()
         )
 
-        # Final classification head w/ clinical input
         self.classification_head = nn.Sequential(
-            nn.Linear(320 + 128, 128),  # 320 from CNN, 2 clinical inputs
+            nn.Linear(1280 + 128, 128),  # now using full EfficientNet output
             nn.ReLU(),
-            nn.Dropout(0.3),
+            nn.Dropout(0.4),
             nn.Linear(128, num_classification_classes)
         )
 
     def forward(self, x, clinical_features):
+        # Encoder
         x = self.inc(x)
         x1 = x
         x2 = self.down1(x1)
         x3 = self.down2(x2)
         x4 = self.down3(x3)
         x5 = self.down4(x4)
-        x6 = self.deep_blocks(x5)
+        x6 = self.deep_blocks(x5)  # shape: [B, 320, H, W]
 
+        # Segmentation decoder (from 320)
         x_seg = self.up1(x6, x4)
         x_seg = self.up2(x_seg, x3)
         x_seg = self.up3(x_seg, x2)
@@ -77,18 +80,21 @@ class EfficientUNetWithClinicalClassification(nn.Module):
         x_seg = self.final_up(x_seg)
         seg_logits = self.outc(x_seg)
 
-        pooled = self.global_avg_pool(x6).view(x6.size(0), -1)  # shape: (B, 320)
+        # Classification branch
+        x_cls = self.classification_conv(x6)  # shape: [B, 1280, H', W']
+        pooled = self.global_avg_pool(x_cls).view(x_cls.size(0), -1)  # shape: [B, 1280]
 
-        menopause = clinical_features[:, 0:1]  # shape [B, 1]
-        hospital = clinical_features[:, 1:2]  # shape [B, 1]
-
+        # Clinical gating
+        menopause = clinical_features[:, 0:1]
+        hospital = clinical_features[:, 1:2]
         gate_value = self.gate(hospital)
         gated_menopause = gate_value * menopause
         gated_clinical = torch.cat([gated_menopause, hospital], dim=1)
 
-        clinical_embedding = self.clinical_proj(gated_clinical)  # shape [B, 128]
+        clinical_embedding = self.clinical_proj(gated_clinical)  # shape: [B, 128]
 
-        combined = torch.cat([pooled, clinical_embedding], dim=1)
+        # Classification head
+        combined = torch.cat([pooled, clinical_embedding], dim=1)  # shape: [B, 1408]
         class_logits = self.classification_head(combined)
 
         return seg_logits, class_logits
