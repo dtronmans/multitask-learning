@@ -108,7 +108,7 @@ def train(train_dataloader, test_dataloader, model, task, save_path):
         if avg_val_loss < best_val_loss:
             print("Saving best model so far!")
             best_val_loss = avg_val_loss
-            torch.save(model.state_dict(), save_path + "intermediate.pt")
+            torch.save(model.state_dict(), save_path)
 
         print(f"Epoch {epoch + 1}/{num_epochs} - Train Loss: {avg_train_loss:.4f} - Val Loss: {avg_val_loss:.4f}")
 
@@ -117,7 +117,7 @@ def train(train_dataloader, test_dataloader, model, task, save_path):
 
     # Final model save
     print("Training complete.")
-    torch.save(model.state_dict(), save_path + "final.pt")
+    torch.save(model.state_dict(), save_path + "_final.pt")
 
 
 def construct_save_path(denoised, backbone, task):
@@ -160,7 +160,7 @@ if __name__ == "__main__":
     if task == task.CLASSIFICATION or task == task.JOINT:
         mask_only = False
 
-    model = return_model(task, backbone)
+    model = return_model(task, backbone, denoised)
 
     save_path = construct_save_path(denoised, backbone, task)
     print("Save path: " + save_path)

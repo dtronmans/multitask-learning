@@ -1,3 +1,5 @@
+import os
+
 import torch
 from torch import nn
 from torchvision.models import efficientnet_b0, EfficientNet_B0_Weights
@@ -9,13 +11,18 @@ from architectures.segmentation_only.efficientnet_only_segmentation import Effic
 from enums import Task, Backbone
 
 
-def return_model(task, backbone):  # here we return the models, with the clinical information
+def return_model(task, backbone, denoised=False):  # here we return the models, with the clinical information
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     if task == Task.JOINT:
         if backbone == Backbone.EFFICIENTNET:
             old_model = EfficientUNetWithClassification(1, 1, 8)
+            base_path = os.path.join("/exports", "lkeb-hpc", "dzrogmans", "mmotu", "joint")
+            if denoised:
+                base_path = os.path.join(base_path, "efficientnet_joint.pt")
+            else:
+                base_path = os.path.join(base_path, "efficientnet_joint_denoised.pt")
             old_model.load_state_dict(
-                torch.load("models/mmotu/joint/efficientnet_joint.pt", weights_only=True,
+                torch.load(base_path, weights_only=True,
                            map_location=torch.device(device)))
             new_model = EfficientUNetWithClinicalClassification(1, 1, 2)
             new_model = transfer_weights_to_clinical_model(old_model, new_model)
@@ -33,9 +40,16 @@ def return_model(task, backbone):  # here we return the models, with the clinica
                 padding=original_conv.padding,
                 bias=original_conv.bias is not None
             )
+            base_path = os.path.join("/exports", "lkeb-hpc", "dzrogmans", "classification", "segmentation")
+            if denoised:
+                base_path = os.path.join(base_path, "efficientnet_classification_denoised.pt")
+            else:
+                base_path = os.path.join(base_path, "efficientnet_classification.pt")
             efficientnet_model.load_state_dict(
-                torch.load("models/mmotu/classification/efficientnet_classification_intermediate.pt", weights_only=True,
-                           map_location=torch.device(device)))
+                torch.load(
+                    base_path,
+                    weights_only=True,
+                    map_location=torch.device(device)))
             efficientnet_model.to(device)
             model = EfficientNetClinical(efficientnet_model, num_classes=2)
             model.to(device)
@@ -43,7 +57,13 @@ def return_model(task, backbone):  # here we return the models, with the clinica
     if task == Task.SEGMENTATION:
         if backbone == Backbone.EFFICIENTNET:
             model = EfficientUNet(1, 1)
+            base_path = os.path.join("/exports", "lkeb-hpc", "dzrogmans", "mmotu", "segmentation")
+            if denoised:
+                base_path = os.path.join(base_path, "efficientnet_segmentation_denoised.pt")
+            else:
+                base_path = os.path.join(base_path, "efficientnet_segmentation.pt")
             model.load_state_dict(
-                torch.load("models/mmotu/segmentation/efficientnet_unet_intermediate.pt", weights_only=True,
+                torch.load(base_path,
+                           weights_only=True,
                            map_location=torch.device("cpu")))
             return model
