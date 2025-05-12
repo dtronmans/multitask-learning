@@ -92,8 +92,15 @@ def train(train_dataloader, test_dataloader, model, task, save_path):
                     loss = segmentation_criterion(predicted_seg, masks)
                 elif task == Task.JOINT:
                     cls_loss = classification_criterion(predicted_cls, labels)
-                    seg_loss = segmentation_criterion(predicted_seg, masks)
-                    loss = seg_loss + 0.3 * cls_loss
+                    valid_mask_indices = (masks.flatten(1).sum(dim=1) > 0)  # shape: (batch_size,)
+
+                    if valid_mask_indices.any():
+                        valid_predicted_seg = predicted_seg[valid_mask_indices]
+                        valid_masks = masks[valid_mask_indices]
+                        seg_loss = segmentation_criterion(valid_predicted_seg, valid_masks)
+                        loss = seg_loss + 0.3 * cls_loss
+                    else:
+                        loss = 0.3 * cls_loss
 
                 val_loss += loss.item()
 
