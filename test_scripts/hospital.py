@@ -10,14 +10,13 @@ from enums import Backbone, Task
 from train_scripts.mtl_training import return_model
 
 
-def test_model(model, dataloader, task, device):
+def test_model(model, dataloader, task, device, threshold=0.3):  # <-- Add threshold parameter
     model.to(device)
     model.eval()
     correct_cls = 0
     total_cls = 0
     iou_scores = []
 
-    # Initialize confusion matrix components
     true_positive = 0
     true_negative = 0
     false_positive = 0
@@ -34,11 +33,13 @@ def test_model(model, dataloader, task, device):
             predicted_seg, predicted_cls = model(images, clinical)
 
             if task in [Task.CLASSIFICATION, Task.JOINT]:
-                preds = torch.argmax(predicted_cls, dim=1)
+                # Assuming predicted_cls is of shape (batch_size, 2)
+                probs = torch.softmax(predicted_cls, dim=1)[:, 1]  # probability of class 1
+                preds = (probs >= threshold).long()  # Apply threshold
+
                 correct_cls += (preds == labels).sum().item()
                 total_cls += labels.size(0)
 
-                # Compute TP, TN, FP, FN assuming binary classification (0 or 1)
                 true_positive += ((preds == 1) & (labels == 1)).sum().item()
                 true_negative += ((preds == 0) & (labels == 0)).sum().item()
                 false_positive += ((preds == 1) & (labels == 0)).sum().item()
@@ -72,13 +73,13 @@ if __name__ == "__main__":
     task = Task.JOINT
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     mask_only = True
-    if task == task.CLASSIFICATION or task == task.JOINT:
-        mask_only = False
+    # if task == task.CLASSIFICATION or task == task.JOINT:
+    #     mask_only = False
 
     transform = transforms.Compose([
         transforms.Resize((336, 544)),
         transforms.ToTensor(),
-        transforms.Normalize(mean=[0.5], std=[0.5])
+        transforms.Normalize(mean=[0.17], std=[0.21])
     ])
 
     dataset_path = os.path.join("..", "final_datasets", "once_more")

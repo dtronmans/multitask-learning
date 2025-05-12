@@ -128,7 +128,7 @@ def train(train_dataloader, test_dataloader, model, task, save_path):
 
 
 def construct_save_path(denoised, backbone, task):
-    final_str = "hospital_"
+    final_str = ""
     if backbone == Backbone.CLASSIC:
         final_str += "classic_"
     elif backbone == Backbone.EFFICIENTNET:
