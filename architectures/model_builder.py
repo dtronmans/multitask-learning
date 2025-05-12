@@ -16,7 +16,7 @@ def return_model(task, backbone, denoised=False):  # here we return the models, 
     if task == Task.JOINT:
         if backbone == Backbone.EFFICIENTNET:
             old_model = EfficientUNetWithClassification(1, 1, 8)
-            base_path = os.path.join("/exports", "lkeb-hpc", "dzrogmans", "mmotu", "joint")
+            base_path = os.path.join("/exports", "lkeb-hpc", "dzrogmans", "models", "mmotu", "joint")
             if denoised:
                 base_path = os.path.join(base_path, "efficientnet_joint.pt")
             else:
@@ -40,7 +40,7 @@ def return_model(task, backbone, denoised=False):  # here we return the models, 
                 padding=original_conv.padding,
                 bias=original_conv.bias is not None
             )
-            base_path = os.path.join("/exports", "lkeb-hpc", "dzrogmans", "classification", "segmentation")
+            base_path = os.path.join("/exports", "lkeb-hpc", "dzrogmans", "models", "mmotu", "segmentation")
             if denoised:
                 base_path = os.path.join(base_path, "efficientnet_classification_denoised.pt")
             else:
@@ -57,7 +57,7 @@ def return_model(task, backbone, denoised=False):  # here we return the models, 
     if task == Task.SEGMENTATION:
         if backbone == Backbone.EFFICIENTNET:
             model = EfficientUNet(1, 1)
-            base_path = os.path.join("/exports", "lkeb-hpc", "dzrogmans", "mmotu", "segmentation")
+            base_path = os.path.join("/exports", "lkeb-hpc", "dzrogmans", "models", "mmotu", "segmentation")
             if denoised:
                 base_path = os.path.join(base_path, "efficientnet_segmentation_denoised.pt")
             else:
