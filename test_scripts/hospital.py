@@ -89,7 +89,7 @@ if __name__ == "__main__":
         dataset_path = os.path.join(dataset_path, "mtl_final")
 
     model = return_model(task, backbone)
-    model.load_state_dict(torch.load("hospital_efficientnet_jointintermediate.pt", map_location=device))
+    model.load_state_dict(torch.load("models/hospital/joint/efficientnet_joint.pt", weights_only=True, map_location=device))
     model.eval()
     test_dataset = MedicalImageDataset(dataset_path, split="test", mask_only=mask_only, transform=transform)
 

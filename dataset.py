@@ -146,10 +146,10 @@ class MedicalImageDataset(Dataset):
         sample = self[idx]
         image = sample['image'].squeeze().numpy()
         mask = sample['mask'].squeeze().numpy()
-        filename = os.path.basename(self.samples[idx]['image_path'])
+        label = "benign" if sample['label'] == 0 else "malignant"
 
         fig, axs = plt.subplots(1, 2, figsize=(10, 5))
-        fig.suptitle(f"Filename: {filename}", fontsize=14)
+        fig.suptitle(label, fontsize=14)
 
         # Original image
         axs[0].imshow(image, cmap='gray')

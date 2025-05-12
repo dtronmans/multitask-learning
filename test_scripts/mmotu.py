@@ -62,7 +62,7 @@ def test_segmentation_only(model, dataloader, show=False):
 
 
 if __name__ == "__main__":
-    directory = "OTU_2d"
+    directory = "OTU_2d_denoised"
     eps = 1e-6
     transform = transforms.Compose([
         transforms.Resize((336, 544)),
@@ -77,10 +77,19 @@ if __name__ == "__main__":
     dataset = MultimodalMMOTUDataset(directory, phase="test", transforms=transform, mask_transforms=mask_transform)
     dataloader = DataLoader(dataset, batch_size=1, shuffle=False)
 
-    # model = BasicUNet(1, 1)
-    model = EfficientUNetWithClassification(1, 1, 8)
+    model = BasicUNet(1, 1)
+    # model = efficientnet_b0(weights=EfficientNet_B0_Weights.IMAGENET1K_V1)
+    # original_conv = model.features[0][0]
+    # model.features[0][0] = nn.Conv2d(
+    #     in_channels=1,
+    #     out_channels=original_conv.out_channels,
+    #     kernel_size=original_conv.kernel_size,
+    #     stride=original_conv.stride,
+    #     padding=original_conv.padding,
+    #     bias=original_conv.bias is not None
+    # )
     model.load_state_dict(
-        torch.load("models/mmotu/joint/efficientnet_joint.pt", map_location=torch.device("cpu")))
+        torch.load("models/mmotu/segmentation/classic_unet_denoised.pt", map_location=torch.device("cpu")))
     model.to(torch.device("cpu"))
 
     model.eval()
