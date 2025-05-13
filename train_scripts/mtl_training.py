@@ -32,14 +32,14 @@ def train(train_dataloader, test_dataloader, model, task, save_path, clinical):
         total_train = 0
 
         for batch in tqdm(train_dataloader, desc="Training", leave=True):
-            images, labels, masks, clinical = batch['image'].to(device), batch['label'].to(device), \
+            images, labels, masks, clinical_info = batch['image'].to(device), batch['label'].to(device), \
                 batch['mask'].to(device), batch['clinical'].to(
                 device)
             masks = (masks > 0).float()
 
             optimizer.zero_grad()
             if clinical:
-                predicted_seg, predicted_cls = model(images, clinical)
+                predicted_seg, predicted_cls = model(images, clinical_info)
             else:
                 predicted_seg, predicted_cls = model(images)
 
@@ -82,13 +82,13 @@ def train(train_dataloader, test_dataloader, model, task, save_path, clinical):
 
         with torch.no_grad():
             for batch in tqdm(test_dataloader, desc="Validation", leave=True):
-                images, labels, masks, clinical = batch['image'].to(device), batch['label'].to(device), \
+                images, labels, masks, clinical_info = batch['image'].to(device), batch['label'].to(device), \
                     batch['mask'].to(device), batch['clinical'].to(
                     device)
                 masks = (masks > 0).float()
 
                 if clinical:
-                    predicted_seg, predicted_cls = model(images, clinical)
+                    predicted_seg, predicted_cls = model(images, clinical_info)
                 else:
                     predicted_seg, predicted_cls = model(images)
 
