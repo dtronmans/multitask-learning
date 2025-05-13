@@ -45,6 +45,7 @@ def return_model(task, backbone, denoised=False, clinical=False):  # here we ret
                     nn.Dropout(0.4),
                     nn.Linear(128, 2)
                 )
+                model.to(device)
                 return model
     if task == Task.CLASSIFICATION:
         if backbone == Backbone.EFFICIENTNET:
