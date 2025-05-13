@@ -177,7 +177,7 @@ if __name__ == "__main__":
                                    "efficientnet_joint.pt")
     model = EfficientUNetWithClassification(1, 1, 8)
     model.load_state_dict(torch.load(pretrained_path, weights_only=True, map_location=torch.device(device)))
-    model.classification_head[1] = nn.Linear(128, 2)
+    model.classification_head[1] = nn.Linear(1280, 2)
     model.to(device)
 
     save_path = construct_save_path(denoised, backbone, task)
