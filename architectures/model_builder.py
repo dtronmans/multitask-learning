@@ -59,8 +59,6 @@ def return_model(task, backbone, denoised=False, clinical=False):  # here we ret
                 padding=original_conv.padding,
                 bias=original_conv.bias is not None
             )
-            num_features = efficientnet_model.classifier[1].in_features
-            efficientnet_model.classifier[1] = nn.Linear(num_features, 8)
             if denoised:
                 base_path = os.path.join(base_path, "classification", "efficientnet_classification_denoised.pt")
             else:
