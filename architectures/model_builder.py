@@ -37,7 +37,7 @@ def return_model(task, backbone, denoised=False, clinical=False):  # here we ret
                     base_path = os.path.join(base_path, "joint", "efficientnet_joint_denoised.pt")
                 else:
                     base_path = os.path.join(base_path, "joint", "efficientnet_joint.pt")
-                model = EfficientUNetWithClinicalClassification(1, 1, 8)
+                model = EfficientUNetWithClassification(1, 1, 8)
                 model.load_state_dict(torch.load(base_path))
                 model.classification_head[3] = nn.Linear(1280, 2)
     if task == Task.CLASSIFICATION:
