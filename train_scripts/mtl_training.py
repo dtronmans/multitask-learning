@@ -167,7 +167,15 @@ if __name__ == "__main__":
     if task == task.CLASSIFICATION or task == task.JOINT:
         mask_only = False
 
-    model = return_model(task, backbone, denoised)
+    # model = return_model(task, backbone, denoised)
+
+
+    # train joint architecture without clinical information
+    pretrained_path = os.path.join("/exports", "lkeb-hpc", "dzrogmans", "models", "mmotu", "joint",
+                                   "efficientnet_joint.pt")
+    model = EfficientUNetWithClinicalClassification(1, 1, 8)
+    model.load_state_dict(torch.load(pretrained_path))
+    model.classification_head[3] = nn.Linear(128, 2)
 
     save_path = construct_save_path(denoised, backbone, task)
     print("Save path: " + save_path)

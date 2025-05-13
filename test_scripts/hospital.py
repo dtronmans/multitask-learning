@@ -94,11 +94,11 @@ if __name__ == "__main__":
     # model.load_state_dict(torch.load("models/hospital/joint/efficientnet_joint.pt", weights_only=True, map_location=device))
 
     # train joint architecture without clinical information
-    pretrained_path = os.path.join("/exports", "lkeb-hpc", "dzrogmans", "models", "mmotu", "joint",
-                                   "efficientnet_joint.pt")
-    model = EfficientUNetWithClinicalClassification(1, 1, 8)
-    model.load_state_dict(torch.load(pretrained_path))
-    model.classification_head[3] = nn.Linear(128, 2)
+    # pretrained_path = os.path.join("/exports", "lkeb-hpc", "dzrogmans", "models", "mmotu", "joint",
+    #                                "efficientnet_joint.pt")
+    # model = EfficientUNetWithClinicalClassification(1, 1, 8)
+    # model.load_state_dict(torch.load(pretrained_path))
+    # model.classification_head[3] = nn.Linear(128, 2)
 
     model.eval()
     test_dataset = MedicalImageDataset(dataset_path, split="test", mask_only=mask_only, transform=transform)
