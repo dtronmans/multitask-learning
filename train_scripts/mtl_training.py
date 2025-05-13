@@ -9,7 +9,7 @@ import numpy as np
 
 from architectures.model_builder import return_model
 from architectures.mtl.efficientnet_with_classification import EfficientUNetWithClassification, \
-    transfer_weights_to_clinical_model, EfficientUNetWithClinicalClassification
+    transfer_weights_to_clinical_model
 from dataset import MedicalImageDataset
 from enums import Backbone, Task
 from train_scripts.losses import DiceLossWithSigmoid
@@ -173,9 +173,9 @@ if __name__ == "__main__":
     # train joint architecture without clinical information
     pretrained_path = os.path.join("/exports", "lkeb-hpc", "dzrogmans", "models", "mmotu", "joint",
                                    "efficientnet_joint.pt")
-    model = EfficientUNetWithClinicalClassification(1, 1, 8)
-    model.load_state_dict(torch.load(pretrained_path))
-    model.classification_head[3] = nn.Linear(128, 2)
+    model = EfficientUNetWithClassification(1, 1, 8)
+    model.load_state_dict(torch.load(pretrained_path, weights_only=True, map_location=torch.device(device)))
+    model.classification_head[1] = nn.Linear(128, 2)
 
     save_path = construct_save_path(denoised, backbone, task)
     print("Save path: " + save_path)
