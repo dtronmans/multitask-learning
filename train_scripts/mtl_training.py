@@ -129,7 +129,7 @@ def train(train_dataloader, test_dataloader, model, task, save_path):
     torch.save(model.state_dict(), save_path + "_final.pt")
 
 
-def construct_save_path(denoised, backbone, task):
+def construct_save_path(denoised, backbone, task, clinical):
     final_str = ""
     if backbone == Backbone.CLASSIC:
         final_str += "classic_"
@@ -141,6 +141,8 @@ def construct_save_path(denoised, backbone, task):
         final_str += "classification"
     elif task == Task.SEGMENTATION:
         final_str += "segmentation"
+    if clinical is True:
+        final_str += "_clinical"
     if denoised is True:
         final_str += "_denoised"
     return final_str
@@ -148,6 +150,7 @@ def construct_save_path(denoised, backbone, task):
 
 if __name__ == "__main__":
     denoised = False
+    clinical = False
     backbone = Backbone.EFFICIENTNET
     task = Task.JOINT
     num_epochs, batch_size, learning_rate = 80, 8, 0.001
@@ -169,18 +172,9 @@ if __name__ == "__main__":
     if task == task.CLASSIFICATION or task == task.JOINT:
         mask_only = False
 
-    # model = return_model(task, backbone, denoised)
+    model = return_model(task, backbone, denoised, clinical)
 
-
-    # train joint architecture without clinical information
-    pretrained_path = os.path.join("/exports", "lkeb-hpc", "dzrogmans", "models", "mmotu", "joint",
-                                   "efficientnet_joint.pt")
-    model = EfficientUNetWithClassification(1, 1, 8)
-    model.load_state_dict(torch.load(pretrained_path, weights_only=True, map_location=torch.device(device)))
-    model.classification_head[1] = nn.Linear(1280, 2)
-    model.to(device)
-
-    save_path = construct_save_path(denoised, backbone, task)
+    save_path = construct_save_path(denoised, backbone, task, clinical)
     print("Save path: " + save_path)
 
     train_dataset = MedicalImageDataset(dataset_path, split="train", mask_only=mask_only, transform=transform)

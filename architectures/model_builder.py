@@ -11,23 +11,35 @@ from architectures.segmentation_only.efficientnet_only_segmentation import Effic
 from enums import Task, Backbone
 
 
-def return_model(task, backbone, denoised=False):  # here we return the models, with the clinical information
+def return_model(task, backbone, denoised=False, clinical=False):  # here we return the models, with the clinical information
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if torch.cuda.is_available():
+        base_path = os.path.join("/exports", "lkeb-hpc", "dzrogmans", "models")
+    else:
+        base_path = os.path.join("models")
     if task == Task.JOINT:
         if backbone == Backbone.EFFICIENTNET:
-            old_model = EfficientUNetWithClassification(1, 1, 8)
-            base_path = os.path.join("/exports", "lkeb-hpc", "dzrogmans", "models", "mmotu", "joint")
-            if denoised:
-                base_path = os.path.join(base_path, "efficientnet_joint.pt")
+            if clinical:
+                old_model = EfficientUNetWithClassification(1, 1, 8)
+                if denoised:
+                    base_path = os.path.join(base_path, "efficientnet_joint_denoised.pt")
+                else:
+                    base_path = os.path.join(base_path, "efficientnet_joint.pt")
+                old_model.load_state_dict(
+                    torch.load(base_path, weights_only=True,
+                               map_location=torch.device(device)))
+                new_model = EfficientUNetWithClinicalClassification(1, 1, 2)
+                new_model = transfer_weights_to_clinical_model(old_model, new_model)
+                new_model.to(device)
+                return new_model
             else:
-                base_path = os.path.join(base_path, "efficientnet_joint_denoised.pt")
-            old_model.load_state_dict(
-                torch.load(base_path, weights_only=True,
-                           map_location=torch.device(device)))
-            new_model = EfficientUNetWithClinicalClassification(1, 1, 2)
-            new_model = transfer_weights_to_clinical_model(old_model, new_model)
-            new_model.to(device)
-            return new_model
+                if denoised:
+                    base_path = os.path.join(base_path, "efficientnet_joint_denoised.pt")
+                else:
+                    base_path = os.path.join(base_path, "efficientnet_joint.pt")
+                model = EfficientUNetWithClinicalClassification(1, 1, 8)
+                model.load_state_dict(torch.load(base_path))
+                model.classification_head[3] = nn.Linear(1280, 2)
     if task == Task.CLASSIFICATION:
         if backbone == Backbone.EFFICIENTNET:
             efficientnet_model = efficientnet_b0(weights=EfficientNet_B0_Weights.IMAGENET1K_V1)
@@ -40,7 +52,6 @@ def return_model(task, backbone, denoised=False):  # here we return the models, 
                 padding=original_conv.padding,
                 bias=original_conv.bias is not None
             )
-            base_path = os.path.join("/exports", "lkeb-hpc", "dzrogmans", "models", "mmotu", "classification")
             if denoised:
                 base_path = os.path.join(base_path, "efficientnet_classification_denoised.pt")
             else:
@@ -57,7 +68,7 @@ def return_model(task, backbone, denoised=False):  # here we return the models, 
     if task == Task.SEGMENTATION:
         if backbone == Backbone.EFFICIENTNET:
             model = EfficientUNet(1, 1)
-            base_path = os.path.join("/exports", "lkeb-hpc", "dzrogmans", "models", "mmotu", "segmentation")
+            base_path = os.path.join("models", "mmotu", "segmentation")
             if denoised:
                 base_path = os.path.join(base_path, "efficientnet_segmentation_denoised.pt")
             else:
