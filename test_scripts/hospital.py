@@ -1,10 +1,12 @@
 import os
 
 import torch
+from torch import nn
 from torch.utils.data import DataLoader
 from torchvision import transforms
 from tqdm import tqdm
 
+from architectures.mtl.efficientnet_with_classification import EfficientUNetWithClinicalClassification
 from dataset import MedicalImageDataset
 from enums import Backbone, Task
 from train_scripts.mtl_training import return_model
@@ -88,8 +90,16 @@ if __name__ == "__main__":
     else:
         dataset_path = os.path.join(dataset_path, "mtl_final")
 
-    model = return_model(task, backbone)
-    model.load_state_dict(torch.load("models/hospital/joint/efficientnet_joint.pt", weights_only=True, map_location=device))
+    # model = return_model(task, backbone)
+    # model.load_state_dict(torch.load("models/hospital/joint/efficientnet_joint.pt", weights_only=True, map_location=device))
+
+    # train joint architecture without clinical information
+    pretrained_path = os.path.join("/exports", "lkeb-hpc", "dzrogmans", "models", "mmotu", "joint",
+                                   "efficientnet_joint.pt")
+    model = EfficientUNetWithClinicalClassification(1, 1, 8)
+    model.load_state_dict(torch.load(pretrained_path))
+    model.classification_head[3] = nn.Linear(128, 2)
+
     model.eval()
     test_dataset = MedicalImageDataset(dataset_path, split="test", mask_only=mask_only, transform=transform)
 
