@@ -12,7 +12,7 @@ from enums import Backbone, Task
 from train_scripts.mtl_training import return_model
 
 
-def test_model(model, dataloader, task, device, threshold=0.3):  # <-- Add threshold parameter
+def test_model(model, dataloader, task, device, clinical, threshold=0.3):  # <-- Add threshold parameter
     model.to(device)
     model.eval()
     correct_cls = 0
@@ -29,10 +29,13 @@ def test_model(model, dataloader, task, device, threshold=0.3):  # <-- Add thres
             images = batch['image'].to(device)
             labels = batch['label'].to(device)
             masks = batch['mask'].to(device)
-            clinical = batch['clinical'].to(device)
+            clinical_info = batch['clinical'].to(device)
             masks = (masks > 0).float()
 
-            predicted_seg, predicted_cls = model(images, clinical)
+            if clinical:
+                predicted_seg, predicted_cls = model(images, clinical_info)
+            else:
+                predicted_seg, predicted_cls = model(images)
 
             if task in [Task.CLASSIFICATION, Task.JOINT]:
                 # Assuming predicted_cls is of shape (batch_size, 2)
@@ -63,6 +66,9 @@ def test_model(model, dataloader, task, device, threshold=0.3):  # <-- Add thres
         print(f"Classification Accuracy: {acc:.2f}%")
         print(f"Sensitivity (Recall): {sensitivity:.4f}")
         print(f"Specificity: {specificity:.4f}")
+        print("\nConfusion Matrix:")
+        print(f"TP: {true_positive} | FP: {false_positive}")
+        print(f"FN: {false_negative} | TN: {true_negative}")
 
     if task in [Task.SEGMENTATION, Task.JOINT]:
         mean_iou = sum(iou_scores) / len(iou_scores) if iou_scores else 1.0
@@ -71,9 +77,9 @@ def test_model(model, dataloader, task, device, threshold=0.3):  # <-- Add thres
 
 if __name__ == "__main__":
     denoised = False
-    clinical = False
+    clinical = True
     backbone = Backbone.EFFICIENTNET
-    task = Task.JOINT
+    task = Task.CLASSIFICATION
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     mask_only = True
     if task == task.CLASSIFICATION or task == task.JOINT:
@@ -92,11 +98,11 @@ if __name__ == "__main__":
         dataset_path = os.path.join(dataset_path, "mtl_final")
 
     model = return_model(task, backbone, denoised, clinical)
-    model.load_state_dict(torch.load("models/hospital/joint/efficientnet_joint.pt", weights_only=True, map_location=device))
+    model.load_state_dict(torch.load("models/hospital/classification/efficientnet_classification_clinical.pt", weights_only=True, map_location=device))
 
     model.eval()
     test_dataset = MedicalImageDataset(dataset_path, split="test", mask_only=mask_only, transform=transform)
 
     test_loader = DataLoader(test_dataset, batch_size=1, shuffle=True)
 
-    test_model(model, test_loader, task, device)
+    test_model(model, test_loader, task, device, clinical)

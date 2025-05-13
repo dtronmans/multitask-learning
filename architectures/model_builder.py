@@ -69,9 +69,12 @@ def return_model(task, backbone, denoised=False, clinical=False):  # here we ret
                     weights_only=True,
                     map_location=torch.device(device)))
             efficientnet_model.to(device)
-            model = EfficientNetClinical(efficientnet_model, num_classes=2)
-            model.to(device)
-            return model
+            if clinical:
+                model = EfficientNetClinical(efficientnet_model, num_classes=2)
+                model.to(device)
+                return model
+            else:
+                return efficientnet_model
     if task == Task.SEGMENTATION:
         if backbone == Backbone.EFFICIENTNET:
             model = EfficientUNet(1, 1)
