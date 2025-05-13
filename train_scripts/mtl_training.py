@@ -38,7 +38,8 @@ def train(train_dataloader, test_dataloader, model, task, save_path):
             masks = (masks > 0).float()
 
             optimizer.zero_grad()
-            predicted_seg, predicted_cls = model(images, clinical)
+            # predicted_seg, predicted_cls = model(images, clinical)
+            predicted_seg, predicted_cls = model(images)
 
             if task == Task.CLASSIFICATION:
                 loss = classification_criterion(predicted_cls, labels)
@@ -84,7 +85,8 @@ def train(train_dataloader, test_dataloader, model, task, save_path):
                     device)
                 masks = (masks > 0).float()
 
-                predicted_seg, predicted_cls = model(images, clinical)
+                # predicted_seg, predicted_cls = model(images, clinical)
+                predicted_seg, predicted_cls = model(images)
 
                 if task == Task.CLASSIFICATION:
                     loss = classification_criterion(predicted_cls, labels)
