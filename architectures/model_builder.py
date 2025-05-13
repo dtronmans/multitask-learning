@@ -22,9 +22,9 @@ def return_model(task, backbone, denoised=False, clinical=False):  # here we ret
             if clinical:
                 old_model = EfficientUNetWithClassification(1, 1, 8)
                 if denoised:
-                    base_path = os.path.join(base_path, "efficientnet_joint_denoised.pt")
+                    base_path = os.path.join(base_path, "joint", "efficientnet_joint_denoised.pt")
                 else:
-                    base_path = os.path.join(base_path, "efficientnet_joint.pt")
+                    base_path = os.path.join(base_path, "joint", "efficientnet_joint.pt")
                 old_model.load_state_dict(
                     torch.load(base_path, weights_only=True,
                                map_location=torch.device(device)))
@@ -34,9 +34,9 @@ def return_model(task, backbone, denoised=False, clinical=False):  # here we ret
                 return new_model
             else:
                 if denoised:
-                    base_path = os.path.join(base_path, "efficientnet_joint_denoised.pt")
+                    base_path = os.path.join(base_path, "joint", "efficientnet_joint_denoised.pt")
                 else:
-                    base_path = os.path.join(base_path, "efficientnet_joint.pt")
+                    base_path = os.path.join(base_path, "joint", "efficientnet_joint.pt")
                 model = EfficientUNetWithClinicalClassification(1, 1, 8)
                 model.load_state_dict(torch.load(base_path))
                 model.classification_head[3] = nn.Linear(1280, 2)
@@ -53,9 +53,9 @@ def return_model(task, backbone, denoised=False, clinical=False):  # here we ret
                 bias=original_conv.bias is not None
             )
             if denoised:
-                base_path = os.path.join(base_path, "efficientnet_classification_denoised.pt")
+                base_path = os.path.join(base_path, "classification", "efficientnet_classification_denoised.pt")
             else:
-                base_path = os.path.join(base_path, "efficientnet_classification.pt")
+                base_path = os.path.join(base_path, "classification", "efficientnet_classification.pt")
             efficientnet_model.load_state_dict(
                 torch.load(
                     base_path,
@@ -70,9 +70,9 @@ def return_model(task, backbone, denoised=False, clinical=False):  # here we ret
             model = EfficientUNet(1, 1)
             base_path = os.path.join("models", "mmotu", "segmentation")
             if denoised:
-                base_path = os.path.join(base_path, "efficientnet_segmentation_denoised.pt")
+                base_path = os.path.join(base_path, "segmentation", "efficientnet_segmentation_denoised.pt")
             else:
-                base_path = os.path.join(base_path, "efficientnet_segmentation.pt")
+                base_path = os.path.join(base_path, "segmentation", "efficientnet_segmentation.pt")
             model.load_state_dict(
                 torch.load(base_path,
                            weights_only=True,
