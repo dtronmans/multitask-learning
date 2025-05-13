@@ -39,7 +39,13 @@ def return_model(task, backbone, denoised=False, clinical=False):  # here we ret
                     base_path = os.path.join(base_path, "joint", "efficientnet_joint.pt")
                 model = EfficientUNetWithClassification(1, 1, 8)
                 model.load_state_dict(torch.load(base_path))
-                model.classification_head[1] = nn.Linear(1280, 2)
+                model.classification_head = nn.Sequential(
+                    nn.Linear(1280, 128),  # to replicate clinical
+                    nn.ReLU(),
+                    nn.Dropout(0.4),
+                    nn.Linear(128, 2)
+                )
+                return model
     if task == Task.CLASSIFICATION:
         if backbone == Backbone.EFFICIENTNET:
             efficientnet_model = efficientnet_b0(weights=EfficientNet_B0_Weights.IMAGENET1K_V1)
