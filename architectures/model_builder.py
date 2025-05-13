@@ -76,6 +76,7 @@ def return_model(task, backbone, denoised=False, clinical=False):  # here we ret
             else:
                 num_features = efficientnet_model.classifier[1].in_features
                 efficientnet_model.classifier[1] = nn.Linear(num_features, 2)
+                efficientnet_model.to(device)
                 return efficientnet_model
     if task == Task.SEGMENTATION:
         if backbone == Backbone.EFFICIENTNET:
