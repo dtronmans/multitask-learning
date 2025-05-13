@@ -14,9 +14,9 @@ from enums import Task, Backbone
 def return_model(task, backbone, denoised=False, clinical=False):  # here we return the models, with the clinical information
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     if torch.cuda.is_available():
-        base_path = os.path.join("/exports", "lkeb-hpc", "dzrogmans", "models")
+        base_path = os.path.join("/exports", "lkeb-hpc", "dzrogmans", "models", "mmotu")
     else:
-        base_path = os.path.join("models")
+        base_path = os.path.join("models", "mmotu")
     if task == Task.JOINT:
         if backbone == Backbone.EFFICIENTNET:
             if clinical:
