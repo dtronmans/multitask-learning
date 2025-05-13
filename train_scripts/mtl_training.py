@@ -15,7 +15,7 @@ from enums import Backbone, Task
 from train_scripts.losses import DiceLossWithSigmoid
 
 
-def train(train_dataloader, test_dataloader, model, task, save_path):
+def train(train_dataloader, test_dataloader, model, task, save_path, clinical):
     print("Task: " + str(task))
     class_weights = torch.tensor([1.0, 2.0]).to(device)
     classification_criterion = nn.CrossEntropyLoss(weight=class_weights)
@@ -38,8 +38,10 @@ def train(train_dataloader, test_dataloader, model, task, save_path):
             masks = (masks > 0).float()
 
             optimizer.zero_grad()
-            # predicted_seg, predicted_cls = model(images, clinical)
-            predicted_seg, predicted_cls = model(images)
+            if clinical:
+                predicted_seg, predicted_cls = model(images, clinical)
+            else:
+                predicted_seg, predicted_cls = model(images)
 
             if task == Task.CLASSIFICATION:
                 loss = classification_criterion(predicted_cls, labels)
@@ -85,8 +87,10 @@ def train(train_dataloader, test_dataloader, model, task, save_path):
                     device)
                 masks = (masks > 0).float()
 
-                # predicted_seg, predicted_cls = model(images, clinical)
-                predicted_seg, predicted_cls = model(images)
+                if clinical:
+                    predicted_seg, predicted_cls = model(images, clinical)
+                else:
+                    predicted_seg, predicted_cls = model(images)
 
                 if task == Task.CLASSIFICATION:
                     loss = classification_criterion(predicted_cls, labels)
@@ -188,4 +192,4 @@ if __name__ == "__main__":
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 
-    train(train_loader, val_loader, model, task, save_path)
+    train(train_loader, val_loader, model, task, save_path, clinical)
