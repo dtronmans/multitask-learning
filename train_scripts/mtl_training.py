@@ -94,10 +94,16 @@ def train(train_dataloader, test_dataloader, model, task, save_path, clinical):
                 masks = (masks > 0).float()
 
                 if clinical:
-                    predicted_seg, predicted_cls = model(images, clinical_info)
+                    if task == Task.CLASSIFICATION:
+                        predicted_cls = model(images)
+                    else:
+                        predicted_seg, predicted_cls = model(images, clinical_info)
                 else:
-                    predicted_seg, predicted_cls = model(images)
-
+                    if task == Task.CLASSIFICATION:
+                        predicted_cls = model(images)
+                    else:
+                        predicted_seg, predicted_cls = model(images)
+                        
                 if task == Task.CLASSIFICATION:
                     loss = classification_criterion(predicted_cls, labels)
                 elif task == Task.SEGMENTATION:
