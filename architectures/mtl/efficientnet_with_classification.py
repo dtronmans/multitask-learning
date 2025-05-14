@@ -27,7 +27,7 @@ class EfficientUNetWithClinicalClassification(nn.Module):
         self.down4 = EfficientDown([features[4]])
         self.deep_blocks = nn.Sequential(features[5], features[6], features[7])  # output: 320 channels
 
-        # Save the classification expansion block (320 → 1280)
+        # Save the classification expansion block (320 -> 1280)
         self.classification_conv = features[8]  # EfficientNet's final conv block
 
         # Segmentation decoder
@@ -164,7 +164,7 @@ class EfficientUNetWithClassification(nn.Module):
         self.down3 = EfficientDown([features[3]])  # 40 channels
         self.down4 = EfficientDown([features[4]])  # 80 channels
 
-        self.deep_blocks = nn.Sequential(features[5], features[6], features[7], features[8])  # Output: 320 channels
+        self.deep_blocks = nn.Sequential(features[5], features[6], features[7], features[8])
 
         # Segmentation decoder
         self.up1 = UpMid(1280, 40, 40, bilinear)

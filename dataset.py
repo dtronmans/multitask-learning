@@ -80,7 +80,7 @@ class MedicalImageDataset(Dataset):
             clinical_info[study_id] = {
                 'menopausal_status': row.get('Menopausal status', 'Unknown'),
                 'malignancy': 'malignant' if row['Malignancy status'] == 1 else 'benign',
-                'hospital': 0 if study_id.startswith('LUM') else 1
+                'hospital': 0 if study_id.lower().startswith('lum') else 1
             }
 
         for rel_path in split_filenames:
@@ -140,7 +140,8 @@ class MedicalImageDataset(Dataset):
             'label': sample['label'],
             'menopausal_status': sample['menopausal_status'],
             'hospital': sample['hospital'],
-            'clinical': sample['clinical']
+            'clinical': sample['clinical'],
+            'image_path': sample['image_path']
         }
     def display(self, idx):
         sample = self[idx]
