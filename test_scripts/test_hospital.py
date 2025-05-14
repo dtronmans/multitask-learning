@@ -2,6 +2,7 @@ import os
 
 import torch
 from matplotlib import pyplot as plt
+from sklearn.metrics import f1_score, roc_auc_score, precision_score
 from torch import nn
 from torch.utils.data import DataLoader
 from torchvision import transforms
@@ -12,6 +13,7 @@ from architectures.mtl.efficientnet_with_classification import EfficientUNetWith
 from dataset import MedicalImageDataset
 from enums import Backbone, Task
 from train_scripts.mtl_training import return_model
+
 
 
 
@@ -82,10 +84,12 @@ def test_model(model, dataloader, task, device, clinical, threshold=0.5, show=Fa
 
         f1 = f1_score(all_labels, all_preds)
         auc = roc_auc_score(all_labels, all_probs) if len(set(all_labels)) > 1 else float('nan')  # avoid AUC error if only one class
+        precision = precision_score(all_labels, all_preds)
 
         print(f"Classification Accuracy: {acc:.2f}%")
         print(f"Sensitivity (Recall): {sensitivity:.4f}")
         print(f"Specificity: {specificity:.4f}")
+        print(f"Precision: {precision:.4f}")
         print(f"F1 Score: {f1:.4f}")
         print(f"AUC: {auc:.4f}")
         print("\nConfusion Matrix:")
@@ -184,4 +188,4 @@ if __name__ == "__main__":
     # scaled_model = ModelWithTemperature(model)
     # scaled_model.set_temperature(valid_loader, device)
 
-    test_model(model, test_loader, task, device, clinical, show=True)
+    test_model(model, test_loader, task, device, clinical, show=False)

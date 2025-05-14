@@ -81,7 +81,6 @@ def return_model(task, backbone, denoised=False, clinical=False):  # here we ret
     if task == Task.SEGMENTATION:
         if backbone == Backbone.EFFICIENTNET:
             model = EfficientUNet(1, 1)
-            base_path = os.path.join("models", "mmotu", "segmentation")
             if denoised:
                 base_path = os.path.join(base_path, "segmentation", "efficientnet_segmentation_denoised.pt")
             else:
