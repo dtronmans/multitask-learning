@@ -88,5 +88,6 @@ def return_model(task, backbone, denoised=False, clinical=False):  # here we ret
             model.load_state_dict(
                 torch.load(base_path,
                            weights_only=True,
-                           map_location=torch.device("cpu")))
+                           map_location=device))
+            model.to(device)
             return model
