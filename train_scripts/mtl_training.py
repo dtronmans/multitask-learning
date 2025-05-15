@@ -92,10 +92,7 @@ def train(train_dataloader, test_dataloader, model, task, save_path, clinical):
                 masks = (masks > 0).float()
 
                 if clinical:
-                    if task == Task.CLASSIFICATION:
-                        predicted_cls = model(images)
-                    else:
-                        predicted_seg, predicted_cls = model(images, clinical_info)
+                    predicted_seg, predicted_cls = model(images, clinical_info)
                 else:
                     if task == Task.CLASSIFICATION:
                         predicted_cls = model(images)
@@ -166,8 +163,8 @@ def construct_save_path(denoised, backbone, task, clinical):
 
 if __name__ == "__main__":
     denoised = False
-    clinical = True
-    backbone = Backbone.RESNET
+    clinical = False
+    backbone = Backbone.EFFICIENTNET
     task = Task.JOINT
     num_epochs, batch_size, learning_rate = 80, 8, 0.001
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -194,7 +191,7 @@ if __name__ == "__main__":
     pair_transform = PairedTransform(size=(336, 544))
 
     train_dataset = MedicalImageDataset(dataset_path, split="train", mask_only=mask_only, transform=pair_transform)
-    val_dataset = MedicalImageDataset(dataset_path, split="val", mask_only=mask_only, transform=transform)
+    val_dataset = MedicalImageDataset(dataset_path, split="val", mask_only=mask_only)
 
     print("Train dataset length: " + str(len(train_dataset)))
     print("Val dataset length: " + str(len(val_dataset)))
