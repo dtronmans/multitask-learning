@@ -127,7 +127,7 @@ def visualize_joint_prediction(images, pred_masks, preds, labels, clinical_info,
         clinical = clinical_info[i].int().tolist()
 
         menopausal_status = "pre" if clinical[0] == 0 else "post"
-        oncology_center = "false" if clinical[1] == 0 else "true"
+        oncology_center = "true" if clinical[1] == 0 else "false"
         clinical_text = f"menopausal status: {menopausal_status} | oncology center: {oncology_center}"
         image_path = image_paths[i] if isinstance(image_paths[i], str) else image_paths[i].decode('utf-8')
 
@@ -175,7 +175,7 @@ if __name__ == "__main__":
 
     print("dataset path: " + dataset_path)
     model = return_model(task, backbone, denoised, clinical)
-    model.load_state_dict(torch.load("models/hospital/joint/efficientnet_joint_clinical.pt", weights_only=True,
+    model.load_state_dict(torch.load("models/hospital/joint/efficientnet_joint.pt", weights_only=True,
                                      map_location=device))
 
     model.eval()
@@ -184,8 +184,5 @@ if __name__ == "__main__":
 
     test_loader = DataLoader(test_dataset, batch_size=1, shuffle=True)
     valid_loader = DataLoader(validation_dataset, batch_size=1, shuffle=True)
-
-    # scaled_model = ModelWithTemperature(model)
-    # scaled_model.set_temperature(valid_loader, device)
 
     test_model(model, test_loader, task, device, clinical, show=False)

@@ -77,7 +77,7 @@ if __name__ == "__main__":
     dataset = MultimodalMMOTUDataset(directory, phase="test", transforms=transform, mask_transforms=mask_transform)
     dataloader = DataLoader(dataset, batch_size=1, shuffle=False)
 
-    model = BasicUNet(1, 1)
+    model = EfficientUNetWithClassification(1, 1, 8)
     # model = efficientnet_b0(weights=EfficientNet_B0_Weights.IMAGENET1K_V1)
     # original_conv = model.features[0][0]
     # model.features[0][0] = nn.Conv2d(
@@ -89,11 +89,11 @@ if __name__ == "__main__":
     #     bias=original_conv.bias is not None
     # )
     model.load_state_dict(
-        torch.load("models/mmotu/segmentation/classic_unet_denoised.pt", map_location=torch.device("cpu")))
+        torch.load("models/mmotu/joint/efficientnet_joint.pt", map_location=torch.device("cpu")))
     model.to(torch.device("cpu"))
 
     model.eval()
 
-    test_segmentation_only(model, dataloader)
+    test_classification_only(model, dataloader)
 
     # now we need segmentation only, classification only and joint testing
