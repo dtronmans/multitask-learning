@@ -89,7 +89,6 @@ def test_model(model, dataloader, task, device, clinical, threshold=0.5, show=Fa
         print(f"Classification Accuracy: {acc:.2f}%")
         print(f"Sensitivity (Recall): {sensitivity:.4f}")
         print(f"Specificity: {specificity:.4f}")
-        print(f"Precision: {precision:.4f}")
         print(f"F1 Score: {f1:.4f}")
         print(f"AUC: {auc:.4f}")
         print("\nConfusion Matrix:")
@@ -153,9 +152,9 @@ def visualize_joint_prediction(images, pred_masks, preds, labels, clinical_info,
 
 if __name__ == "__main__":
     denoised = False
-    clinical = True
+    clinical = False
     backbone = Backbone.EFFICIENTNET
-    task = Task.JOINT
+    task = Task.SEGMENTATION
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     mask_only = True
     if task == task.CLASSIFICATION or task == task.JOINT:
@@ -163,8 +162,7 @@ if __name__ == "__main__":
 
     transform = transforms.Compose([
         transforms.Resize((336, 544)),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.17], std=[0.21])
+        transforms.ToTensor()
     ])
 
     dataset_path = os.path.join("..", "final_datasets", "once_more")
@@ -175,7 +173,7 @@ if __name__ == "__main__":
 
     print("dataset path: " + dataset_path)
     model = return_model(task, backbone, denoised, clinical)
-    model.load_state_dict(torch.load("models/hospital/joint/efficientnet_joint.pt", weights_only=True,
+    model.load_state_dict(torch.load("models/hospital/segmentation/efficientnet_segmentation.pt", weights_only=True,
                                      map_location=device))
 
     model.eval()

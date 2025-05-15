@@ -12,6 +12,7 @@ from architectures.mtl.efficientnet_with_classification import EfficientUNetWith
     transfer_weights_to_clinical_model
 from dataset import MedicalImageDataset
 from enums import Backbone, Task
+from paired_transform import PairedTransform
 from train_scripts.losses import DiceLossWithSigmoid
 
 
@@ -174,7 +175,6 @@ if __name__ == "__main__":
     transform = transforms.Compose([
         transforms.Resize((336, 544)),
         transforms.ToTensor(),
-        transforms.Normalize(mean=[0.17], std=[0.21])
     ])
 
     dataset_path = os.path.join("/exports", "lkeb-hpc", "dzrogmans")
@@ -191,8 +191,9 @@ if __name__ == "__main__":
 
     save_path = construct_save_path(denoised, backbone, task, clinical)
     print("Save path: " + save_path)
+    pair_transform = PairedTransform(size=(336, 544))
 
-    train_dataset = MedicalImageDataset(dataset_path, split="train", mask_only=mask_only, transform=transform)
+    train_dataset = MedicalImageDataset(dataset_path, split="train", mask_only=mask_only, transform=pair_transform)
     val_dataset = MedicalImageDataset(dataset_path, split="val", mask_only=mask_only, transform=transform)
 
     print("Train dataset length: " + str(len(train_dataset)))

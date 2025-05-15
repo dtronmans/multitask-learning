@@ -127,13 +127,17 @@ class MedicalImageDataset(Dataset):
 
         if sample['mask_path']:
             mask = Image.open(sample['mask_path']).convert('L')
-            mask_transform = transforms.Compose([transforms.Resize((336, 544)), transforms.ToTensor()])
-            mask = mask_transform(mask)
         else:
-            mask = torch.zeros((1, 336, 544))
+            mask = Image.new('L', (544, 336))  # Create empty black mask if not available
 
         if self.transform:
-            image = self.transform(image)
+            image, mask = self.transform(image, mask)
+        else:
+            # Default deterministic transform
+            image = transforms.Resize((336, 544))(image)
+            image = transforms.ToTensor()(image)
+            mask = transforms.Resize((336, 544))(mask)
+            mask = transforms.ToTensor()(mask)
 
         return {
             'image': image,
@@ -144,6 +148,7 @@ class MedicalImageDataset(Dataset):
             'clinical': sample['clinical'],
             'image_path': sample['image_path']
         }
+
     def display(self, idx):
         sample = self[idx]
         image = sample['image'].squeeze().numpy()

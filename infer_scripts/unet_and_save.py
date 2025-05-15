@@ -6,6 +6,7 @@ from torchvision import transforms
 from torch.utils.data import DataLoader
 from PIL import Image
 
+from architectures.segmentation_only.efficientnet_only_segmentation import EfficientUNet
 from architectures.unet_parts import BasicUNet
 from dataset import MedicalImageDataset
 
@@ -21,8 +22,8 @@ def save_cropped_segmented_images(model, dataloader, destination_folder):
 
     with torch.no_grad():
         for batch in dataloader:
-            image, mask, label, filename = batch['image'], batch['mask'], batch['label'], batch['filename']
-            output = model(image)
+            image, mask, label, filename = batch['image'], batch['mask'], batch['label'], batch['image_path']
+            output, _ = model(image)
 
             pred_mask = torch.sigmoid(output)
             pred_mask = (pred_mask > 0.5).float()
@@ -69,8 +70,8 @@ def save_cropped_segmented_images(model, dataloader, destination_folder):
 
 
 if __name__ == "__main__":
-    file_path = "../final_datasets/once_more/mtl_denoised/mtl_denoised"
-    model_path = "models/hospital/unet_not_normalized_denoised.pt"
+    file_path = "../final_datasets/once_more/mtl_final"
+    model_path = "models/hospital/segmentation/efficientnet_segmentation.pt"
     destination_folder = "mtl_cropped"
 
     transform = transforms.Compose([
@@ -78,10 +79,10 @@ if __name__ == "__main__":
         transforms.ToTensor()
     ])
 
-    dataset = MedicalImageDataset(file_path, split="test", transform=transform, mask_only=False)
+    dataset = MedicalImageDataset(file_path, split="train", transform=transform, mask_only=False)
     dataloader = DataLoader(dataset, batch_size=1, shuffle=True)
 
-    model = BasicUNet(1, 1)
+    model = EfficientUNet(1, 1)
     model.load_state_dict(torch.load(model_path, map_location=torch.device("cpu")))
 
     save_cropped_segmented_images(model, dataloader, destination_folder)
