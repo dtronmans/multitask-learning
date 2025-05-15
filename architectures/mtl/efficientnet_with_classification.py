@@ -109,16 +109,9 @@ class EfficientUNetWithClassification(nn.Module):
         self.bilinear = bilinear
 
         effnet = efficientnet_b0(weights=EfficientNet_B0_Weights.IMAGENET1K_V1)
-
-        # Save the avgpool and classifier for later reuse
-        self.global_avg_pool = effnet.avgpool
-        self.classification_head = effnet.classifier
-
-        # Replace final classifier's output to match your class count
-        self.classification_head[0] = nn.Dropout(p=0.4)
-        self.classification_head[1] = nn.Linear(1280, num_classification_classes)
         features = list(effnet.features.children())
 
+        # Encoder
         self.inc = nn.Sequential(
             nn.Conv2d(n_channels, 3, kernel_size=1),
             features[0]
@@ -128,25 +121,38 @@ class EfficientUNetWithClassification(nn.Module):
         self.down3 = EfficientDown([features[3]])  # 40 channels
         self.down4 = EfficientDown([features[4]])  # 80 channels
 
-        self.deep_blocks = nn.Sequential(features[5], features[6], features[7], features[8])
+        # Deep encoder blocks (up to 320 channels)
+        self.deep_blocks = nn.Sequential(features[5], features[6], features[7])  # output: 320 channels
 
-        # Segmentation decoder
-        self.up1 = UpMid(1280, 40, 40, bilinear)
+        # Final EfficientNet block (320 → 1280)
+        self.classification_conv = features[8]  # don't use in segmentation
+
+        # Segmentation decoder (starting from 320)
+        self.up1 = UpMid(320, 40, 40, bilinear)
         self.up2 = UpMid(40, 24, 24, bilinear)
         self.up3 = UpMid(24, 16, 16, bilinear)
         self.up4 = UpMid(16, 32, 32, bilinear)
         self.final_up = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
         self.outc = OutConv(32, n_segmentation_classes)
 
+        # Classification head (same structure as clinical, without clinical input)
+        self.global_avg_pool = effnet.avgpool  # AdaptiveAvgPool2d(1)
+        self.classification_head = nn.Sequential(
+            nn.Linear(1280, 128),
+            nn.ReLU(),
+            nn.Dropout(0.4),
+            nn.Linear(128, num_classification_classes)
+        )
+
     def forward(self, x):
+        # Encoder
         x = self.inc(x)
         x1 = x
         x2 = self.down1(x1)
         x3 = self.down2(x2)
         x4 = self.down3(x3)
         x5 = self.down4(x4)
-
-        x6 = self.deep_blocks(x5)
+        x6 = self.deep_blocks(x5)  # [B, 320, H, W]
 
         # Segmentation path
         x_seg = self.up1(x6, x4)
@@ -156,9 +162,10 @@ class EfficientUNetWithClassification(nn.Module):
         x_seg = self.final_up(x_seg)
         seg_logits = self.outc(x_seg)
 
-        # Classification path (same as EfficientNet-B0)
-        pooled = self.global_avg_pool(x6)
-        class_logits = self.classification_head(pooled.flatten(1))
+        # Classification path (match clinical model)
+        x_cls = self.classification_conv(x6)  # [B, 1280, H, W]
+        pooled = self.global_avg_pool(x_cls).view(x_cls.size(0), -1)  # [B, 1280]
+        class_logits = self.classification_head(pooled)
 
         return seg_logits, class_logits
 
