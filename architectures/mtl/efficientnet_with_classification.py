@@ -56,10 +56,7 @@ class EfficientUNetWithClinicalClassification(nn.Module):
         )
 
         self.classification_head = nn.Sequential(
-            nn.Linear(1280 + 128, 128),  # now using full EfficientNet output
-            nn.ReLU(),
-            nn.Dropout(0.4),
-            nn.Linear(128, num_classification_classes)
+            nn.Linear(1280 + 128, num_classification_classes),  # now using full EfficientNet output
         )
 
     def forward(self, x, clinical_features):
@@ -137,12 +134,7 @@ class EfficientUNetWithClassification(nn.Module):
 
         # Classification head (same structure as clinical, without clinical input)
         self.global_avg_pool = effnet.avgpool  # AdaptiveAvgPool2d(1)
-        self.classification_head = nn.Sequential(
-            nn.Linear(1280, 128),
-            nn.ReLU(),
-            nn.Dropout(0.4),
-            nn.Linear(128, num_classification_classes)
-        )
+        self.classification_head = nn.Linear(1280, num_classification_classes)
 
     def forward(self, x):
         # Encoder

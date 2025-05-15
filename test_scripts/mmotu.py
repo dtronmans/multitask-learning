@@ -62,12 +62,11 @@ def test_segmentation_only(model, dataloader, show=False):
 
 
 if __name__ == "__main__":
-    directory = "OTU_2d_denoised"
+    directory = "OTU_2d"
     eps = 1e-6
     transform = transforms.Compose([
         transforms.Resize((336, 544)),
         transforms.ToTensor(),
-        transforms.Normalize(mean=[0.5], std=[0.5])
     ])
     mask_transform = transforms.Compose([
         transforms.Resize((336, 544)),

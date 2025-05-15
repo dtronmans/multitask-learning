@@ -153,9 +153,9 @@ def visualize_joint_prediction(images, pred_masks, preds, labels, clinical_info,
 
 if __name__ == "__main__":
     denoised = False
-    clinical = False
+    clinical = True
     backbone = Backbone.EFFICIENTNET
-    task = Task.SEGMENTATION
+    task = Task.JOINT
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     mask_only = True
     if task == task.CLASSIFICATION or task == task.JOINT:
