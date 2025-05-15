@@ -111,12 +111,8 @@ class EfficientUNetWithClassification(nn.Module):
         self.classification_head = effnet.classifier
 
         # Replace final classifier's output to match your class count
-        self.classification_head = nn.Sequential(
-            nn.Linear(1280, 128),  # now using full EfficientNet output
-            nn.ReLU(),
-            nn.Dropout(0.4),
-            nn.Linear(128, num_classification_classes)
-        )
+        self.classification_head[0] = nn.Dropout(p=0.4)
+        self.classification_head[1] = nn.Linear(1280, num_classification_classes)
         features = list(effnet.features.children())
 
         self.inc = nn.Sequential(
