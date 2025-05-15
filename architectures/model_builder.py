@@ -39,7 +39,7 @@ def return_model(task, backbone, denoised=False, clinical=False):  # here we ret
                 else:
                     base_path = os.path.join(base_path, "joint", "efficientnet_joint.pt")
                 model = EfficientUNetWithClassification(1, 1, 8)
-                model.load_state_dict(torch.load(base_path))
+                model.load_state_dict(torch.load(base_path, weights_only=True, map_location=device))
                 model.classification_head = nn.Sequential(
                     nn.Linear(1280, 128),  # to replicate clinical
                     nn.ReLU(),

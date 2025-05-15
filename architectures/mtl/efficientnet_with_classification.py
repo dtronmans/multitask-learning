@@ -25,7 +25,10 @@ class EfficientUNetWithClinicalClassification(nn.Module):
         self.down2 = EfficientDown([features[2]])
         self.down3 = EfficientDown([features[3]])
         self.down4 = EfficientDown([features[4]])
-        self.deep_blocks = nn.Sequential(features[5], features[6], features[7], features[8])  # output: 320 channels
+        self.deep_blocks = nn.Sequential(features[5], features[6], features[7])  # output: 320 channels
+
+        # Save the classification expansion block (320 -> 1280)
+        self.classification_conv = features[8]  # EfficientNet's final conv block
 
         # Segmentation decoder
         self.up1 = UpMid(320, 40, 40, bilinear)
@@ -78,7 +81,8 @@ class EfficientUNetWithClinicalClassification(nn.Module):
         seg_logits = self.outc(x_seg)
 
         # Classification branch
-        pooled = self.global_avg_pool(x6).view(x6.size(0), -1)  # x6 is already [B, 1280, H', W']
+        x_cls = self.classification_conv(x6)  # shape: [B, 1280, H', W']
+        pooled = self.global_avg_pool(x_cls).view(x_cls.size(0), -1)  # shape: [B, 1280]
 
         # Clinical gating
         menopause = clinical_features[:, 0:1]
