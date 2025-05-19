@@ -130,7 +130,6 @@ class MedicalImageDataset(Dataset):
             # Default deterministic transform
             image = transforms.Resize((336, 544))(image)
             image = transforms.ToTensor()(image)
-            image = transforms.Normalize(mean=[0.17], std=[0.21])(image)
             mask = transforms.Resize((336, 544))(mask)
             mask = transforms.ToTensor()(mask)
 

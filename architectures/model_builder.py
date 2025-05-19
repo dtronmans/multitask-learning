@@ -33,6 +33,12 @@ def return_model(task, backbone, denoised=False,
                                map_location=torch.device(device)))
                 new_model = EfficientUNetWithClinicalClassification(1, 1, 2)
                 new_model = transfer_weights_to_clinical_model(old_model, new_model)
+                new_model.classification_head =  nn.Sequential(
+                    nn.Linear(1280 + 128, 128),
+                    nn.ReLU(),
+                    nn.Dropout(0.4),
+                    nn.Linear(128, 2)
+                )
                 new_model.to(device)
                 return new_model
             else:

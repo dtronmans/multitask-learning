@@ -54,7 +54,6 @@ class PairedTransform:
         # Convert to tensor
         image = F.to_tensor(image)
         mask = F.to_tensor(mask)
-        image = F.normalize(image, mean=[0.17], std=[0.21])
 
         return image, mask
 
