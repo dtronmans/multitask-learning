@@ -56,9 +56,11 @@ class EfficientUNetWithClinicalClassification(nn.Module):
         )
 
         # Classification head that takes image (1280) + clinical (128)
-        self.classification_head = nn.Sequential(
-            nn.Dropout(p=0.2, inplace=True),
-            nn.Linear(1408, self.num_classes)
+        nn.Sequential(
+            nn.Linear(1280 + 128, 128),
+            nn.ReLU(),
+            nn.Dropout(0.4),
+            nn.Linear(128, 2)
         )
 
     def forward(self, x, clinical):
