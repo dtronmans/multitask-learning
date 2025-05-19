@@ -42,7 +42,12 @@ def return_model(task, backbone, denoised=False,
                     base_path = os.path.join(base_path, "joint", "efficientnet_joint.pt")
                 model = EfficientUNetWithClassification(1, 1, 8)
                 model.load_state_dict(torch.load(base_path, weights_only=True, map_location=device))
-                model.classification_head[1] = nn.Linear(1280, 2, bias=True)
+                model.classification_head = nn.Sequential(
+                    nn.Linear(1280 + 128, 128),
+                    nn.ReLU(),
+                    nn.Dropout(0.4),
+                    nn.Linear(128, 2)
+                )
                 model.to(device)
                 return model
         elif backbone == Backbone.RESNET:
