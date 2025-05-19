@@ -4,13 +4,16 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 import torch.nn.functional as F
 from torchvision.models import efficientnet_b0, EfficientNet_B0_Weights
+from tqdm import tqdm
 
+from architectures.classification_only.efficientnet_only_classification import EfficientClassificationOnly
 from architectures.classification_only.unet_classification_only import UNetClassificationOnly
 from architectures.mtl.efficientnet_with_classification import EfficientUNetWithClassification
 from architectures.mtl.unet_with_classification import UNetWithClassification
 from architectures.segmentation_only.efficientnet_only_segmentation import EfficientUNet
 from architectures.unet_parts import BasicUNet
 from dataset import MultimodalMMOTUDataset
+from paired_transform import DefaultPairedTransform
 
 
 def test_classification_only(model, dataloader, show=False):
@@ -18,7 +21,7 @@ def test_classification_only(model, dataloader, show=False):
     actual = []
 
     with torch.no_grad():
-        for batch in dataloader:
+        for batch in tqdm(dataloader):
             image, label, mask = batch
             image = image.to(torch.device("cpu"))
             label = label.to(torch.device("cpu"))
@@ -64,31 +67,12 @@ def test_segmentation_only(model, dataloader, show=False):
 if __name__ == "__main__":
     directory = "OTU_2d"
     eps = 1e-6
-    transform = transforms.Compose([
-        transforms.Resize((336, 544)),
-        transforms.ToTensor(),
-    ])
-    mask_transform = transforms.Compose([
-        transforms.Resize((336, 544)),
-        transforms.ToTensor()
-    ])
-
-    dataset = MultimodalMMOTUDataset(directory, phase="test", transforms=transform, mask_transforms=mask_transform)
+    dataset = MultimodalMMOTUDataset(directory, phase="test", paired_transform=DefaultPairedTransform())
     dataloader = DataLoader(dataset, batch_size=1, shuffle=False)
 
-    model = EfficientUNetWithClassification(1, 1, 8)
-    # model = efficientnet_b0(weights=EfficientNet_B0_Weights.IMAGENET1K_V1)
-    # original_conv = model.features[0][0]
-    # model.features[0][0] = nn.Conv2d(
-    #     in_channels=1,
-    #     out_channels=original_conv.out_channels,
-    #     kernel_size=original_conv.kernel_size,
-    #     stride=original_conv.stride,
-    #     padding=original_conv.padding,
-    #     bias=original_conv.bias is not None
-    # )
+    model = UNetClassificationOnly(1, 8)
     model.load_state_dict(
-        torch.load("models/mmotu/joint/efficientnet_joint.pt", map_location=torch.device("cpu")))
+        torch.load("models/mmotu/classification/unet_classification.pt", map_location=torch.device("cpu")))
     model.to(torch.device("cpu"))
 
     model.eval()

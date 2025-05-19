@@ -18,26 +18,11 @@ class UNetClassificationOnly(nn.Module):
         factor = 2 if bilinear else 1
         self.down4 = Down(512, 1024 // factor)
 
-        self.classification_conv_1 = nn.Sequential(
-            nn.Conv2d(1024 // factor, 512, kernel_size=1, stride=1, padding=0),
-            nn.BatchNorm2d(512),
-            nn.ReLU()
-        )
-
-        self.classification_conv_2 = nn.Sequential(
-            nn.Conv2d(512, 256, kernel_size=1, stride=1, padding=0),
-            nn.BatchNorm2d(256),
-            nn.ReLU()
-        )
-
+        # Classification head (aligned with EfficientNet and updated UNetWithClassification)
         self.global_avg_pool = nn.AdaptiveAvgPool2d(1)
-
-        self.classification_fc = nn.Sequential(
-            nn.Flatten(),
-            nn.Linear(512 + 256, 256),
-            nn.ReLU(),
-            nn.Dropout(0.3),
-            nn.Linear(256, num_classification_classes)
+        self.classification_head = nn.Sequential(
+            nn.Dropout(p=0.2, inplace=True),
+            nn.Linear(1024 // factor, num_classification_classes)
         )
 
     def forward(self, x):
@@ -47,13 +32,6 @@ class UNetClassificationOnly(nn.Module):
         x4 = self.down3(x3)
         x5 = self.down4(x4)
 
-        x5_features = self.classification_conv_1(x5)
-        x4_features = self.classification_conv_2(x4)
-
-        x5_pooled = self.global_avg_pool(x5_features).view(x5_features.size(0), -1)
-        x4_pooled = self.global_avg_pool(x4_features).view(x4_features.size(0), -1)
-
-        classification_input = torch.cat((x5_pooled, x4_pooled), dim=1)
-        class_logits = self.classification_fc(classification_input)
-
+        pooled = self.global_avg_pool(x5).view(x5.size(0), -1)
+        class_logits = self.classification_head(pooled)
         return None, class_logits

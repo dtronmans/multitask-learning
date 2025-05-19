@@ -41,10 +41,7 @@ class EfficientNetClinical(nn.Module):
 
         # Final classification head
         self.classification_head = nn.Sequential(
-            nn.Linear(1280 + 128, 128),  # 1280 from EfficientNet-B0 final features
-            nn.ReLU(),
-            nn.Dropout(0.3),
-            nn.Linear(128, num_classes)
+            nn.Linear(1280 + 128, num_classes)
         )
 
     def forward(self, x, clinical_features):
@@ -64,6 +61,36 @@ class EfficientNetClinical(nn.Module):
         class_logits = self.classification_head(combined)
 
         return None, class_logits
+
+class EfficientClassificationOnly(nn.Module):
+    def __init__(self, n_channels, num_classification_classes):
+        super().__init__()
+        self.n_channels = n_channels
+        self.num_classes = num_classification_classes
+
+        effnet = efficientnet_b0(weights=EfficientNet_B0_Weights.IMAGENET1K_V1)
+        features = list(effnet.features.children())
+
+        # Replace input channels if necessary
+        self.input_conv = nn.Conv2d(n_channels, 3, kernel_size=1) if n_channels != 3 else nn.Identity()
+
+        # Sequential downsampling path from EfficientNetB0
+        self.encoder = nn.Sequential(*features)
+
+        # Classification head from EfficientNetB0
+        self.global_avg_pool = effnet.avgpool
+        self.classification_head = nn.Sequential(
+            nn.Dropout(p=0.2, inplace=True),
+            nn.Linear(1280, num_classification_classes, bias=True)
+        )
+
+    def forward(self, x):
+        x = self.input_conv(x)  # Adapt channels if needed
+        x = self.encoder(x)
+        x = self.global_avg_pool(x)
+        x = x.view(x.size(0), -1)
+        logits = self.classification_head(x)
+        return None, logits
 
 
 if __name__ == "__main__":

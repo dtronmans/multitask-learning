@@ -1,21 +1,18 @@
 import os
-import random
-
-import numpy as np
 import pandas as pd
 from PIL import Image
 import torch
 from torch.utils.data import Dataset
 from torchvision import transforms
 import matplotlib.pyplot as plt
-from collections import defaultdict
+
+from paired_transform import DefaultPairedTransform
 
 
 class MultimodalMMOTUDataset(Dataset):
-    def __init__(self, dataset_path, phase="train", transforms=None, mask_transforms=None):
+    def __init__(self, dataset_path, phase="train", paired_transform=None):
         self.dataset_path = dataset_path
-        self.transforms = transforms
-        self.mask_transforms = mask_transforms
+        self.paired_transform = paired_transform or DefaultPairedTransform()
         self.images_dir = os.path.join(dataset_path, "images")
         self.masks_dir = os.path.join(dataset_path, "annotations")
         self.num_classes = 8
@@ -27,16 +24,15 @@ class MultimodalMMOTUDataset(Dataset):
         elif phase == 'test':
             data_file = 'test_cls.txt'
         else:
-            raise ValueError("Invalid phase specified. Choose 'train' or 'val'.")
+            raise ValueError("Invalid phase specified. Choose 'train', 'val', or 'test'.")
 
         self.data = []
         with open(os.path.join(dataset_path, data_file), 'r') as file:
             for line in file:
                 filename, cls = line.strip().split()
                 if os.path.exists(os.path.join(self.images_dir, filename)) and filename != "3.JPG":
-                    cls = int(cls)  # Convert class label to integer directly
+                    cls = int(cls)
                     self.data.append((filename, cls))
-
 
     def __len__(self):
         return len(self.data)
@@ -48,12 +44,10 @@ class MultimodalMMOTUDataset(Dataset):
         mask_path = os.path.join(self.masks_dir, mask_filename)
 
         image = Image.open(img_path).convert('L')
-        mask = Image.open(mask_path).convert('L') if os.path.exists(mask_path) else None
+        mask = Image.open(mask_path).convert('L') if os.path.exists(mask_path) else Image.new('L', image.size)
 
-        if self.transforms:
-            image = self.transforms(image)
-        if self.mask_transforms and mask is not None:
-            mask = self.mask_transforms(mask)
+        if self.paired_transform:
+            image, mask = self.paired_transform(image, mask)
 
         return image, torch.tensor(label, dtype=torch.long), mask
 
@@ -81,7 +75,7 @@ class MedicalImageDataset(Dataset):
             clinical_info[study_id] = {
                 'menopausal_status': row.get('Menopausal status', 'Unknown'),
                 'malignancy': 'malignant' if row['Malignancy status'] == 1 else 'benign',
-                'hospital': 0 if study_id.lower().startswith('lum') else 1
+                'hospital': 1 if study_id.lower().startswith('lum') else 0
             }
 
         for rel_path in split_filenames:

@@ -182,4 +182,4 @@ if __name__ == "__main__":
 
     test_loader = DataLoader(test_dataset, batch_size=1, shuffle=True)
 
-    test_model(model, test_loader, task, device, clinical, show=False)
+    test_model(model, test_loader, task, device, clinical, show=True)

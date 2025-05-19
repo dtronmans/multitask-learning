@@ -52,3 +52,16 @@ class PairedTransform:
         mask = F.to_tensor(mask)
 
         return image, mask
+
+class DefaultPairedTransform:
+    def __init__(self, size=(336, 544)):
+        self.size = size
+
+    def __call__(self, image, mask):
+        image = F.resize(image, self.size)
+        mask = F.resize(mask, self.size)
+
+        image = F.to_tensor(image)
+        mask = F.to_tensor(mask)
+
+        return image, mask
