@@ -162,13 +162,6 @@ def transfer_weights_to_clinical_model(old_model, new_model):
     """
     Transfers encoder and decoder weights from an old EfficientUNetWithClassification
     model to a new EfficientUNetWithClinicalClassification model.
-
-    Args:
-        old_model (EfficientUNetWithClassification): Pretrained model with 8-class classification.
-        new_model (EfficientUNetWithClinicalClassification): New model expecting 2-class classification with clinical input.
-
-    Returns:
-        EfficientUNetWithClinicalClassification: The new model with transferred weights.
     """
     # Get the state_dicts
     old_state_dict = old_model.state_dict()

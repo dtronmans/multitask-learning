@@ -62,6 +62,7 @@ class EfficientNetClinical(nn.Module):
 
         return None, class_logits
 
+
 class EfficientClassificationOnly(nn.Module):
     def __init__(self, n_channels, num_classification_classes):
         super().__init__()
