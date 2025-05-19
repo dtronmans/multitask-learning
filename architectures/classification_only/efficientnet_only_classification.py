@@ -8,18 +8,6 @@ class EfficientNetClinical(nn.Module):
         super(EfficientNetClinical, self).__init__()
         self.backbone = backbone_model
 
-        # Replace the input Conv2d if input is not RGB (e.g., grayscale input with 1 channel)
-        original_conv = self.backbone.features[0][0]
-        if original_conv.in_channels != 1:
-            self.backbone.features[0][0] = nn.Conv2d(
-                in_channels=1,
-                out_channels=original_conv.out_channels,
-                kernel_size=original_conv.kernel_size,
-                stride=original_conv.stride,
-                padding=original_conv.padding,
-                bias=original_conv.bias is not None
-            )
-
         # Global average pooling to get a single vector from CNN
         self.global_avg_pool = nn.AdaptiveAvgPool2d(1)
 
@@ -45,7 +33,8 @@ class EfficientNetClinical(nn.Module):
         )
 
     def forward(self, x, clinical_features):
-        features = self.backbone.features(x)
+        x = self.backbone.input_conv(x)
+        features = self.backbone.encoder(x)
         pooled = self.global_avg_pool(features).view(features.size(0), -1)  # (B, 1280)
 
         menopause = clinical_features[:, 0:1]  # shape [B, 1]
