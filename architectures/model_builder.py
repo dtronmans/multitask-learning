@@ -71,9 +71,20 @@ def return_model(task, backbone, denoised=False,
                 model = EfficientNetClinical(efficientnet_model, num_classes=2)
                 model.to(device)
                 model = transfer_weights_to_clinical_model(efficientnet_model, model)
+                model.classification_head = nn.Sequential(
+                    nn.Linear(1280, 128),
+                    nn.ReLU(),
+                    nn.Dropout(0.4),
+                    nn.Linear(128, 2)
+                )
                 return model
             else:
-                efficientnet_model.classification_head[1] = nn.Linear(1280, 2, bias=True)
+                efficientnet_model.classification_head = nn.Sequential(
+                    nn.Linear(1280, 128),
+                    nn.ReLU(),
+                    nn.Dropout(0.4),
+                    nn.Linear(128, 2)
+                )
                 efficientnet_model.to(device)
                 return efficientnet_model
     if task == Task.SEGMENTATION:
