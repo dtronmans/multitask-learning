@@ -6,7 +6,7 @@ class PairedTransform:
     def __init__(
         self,
         size=(336, 544),
-        flip_prob=0.2,
+        flip_prob=0.4,
         rotation_degrees=20,
         affine_params=None
     ):
@@ -30,9 +30,9 @@ class PairedTransform:
             image = F.hflip(image)
             mask = F.hflip(mask)
 
-        if random.random() < self.flip_prob:
-            image = F.vflip(image)
-            mask = F.vflip(mask)
+        # if random.random() < self.flip_prob:
+        #     image = F.vflip(image)
+        #     mask = F.vflip(mask)
 
         # Random rotation
         angle = random.uniform(-self.rotation_degrees, self.rotation_degrees)
