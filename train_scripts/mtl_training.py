@@ -157,9 +157,9 @@ def construct_save_path(denoised, backbone, task, clinical):
 
 if __name__ == "__main__":
     denoised = False
-    clinical = False
+    clinical = True
     backbone = Backbone.EFFICIENTNET
-    task = Task.JOINT
+    task = Task.CLASSIFICATION
     num_epochs, batch_size, learning_rate = 80, 8, 0.001
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

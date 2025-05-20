@@ -45,10 +45,7 @@ def test_model(model, dataloader, task, device, clinical, threshold=0.3, show=Fa
             if clinical:
                 predicted_seg, predicted_cls = model(images, clinical_info)
             else:
-                if task == Task.CLASSIFICATION:
-                    predicted_cls = model(images)
-                else:
-                    predicted_seg, predicted_cls = model(images)
+                predicted_seg, predicted_cls = model(images)
 
             if task in [Task.CLASSIFICATION, Task.JOINT]:
                 probs = torch.softmax(predicted_cls, dim=1)[:, 1]
@@ -153,9 +150,9 @@ def visualize_joint_prediction(images, pred_masks, preds, labels, clinical_info,
 
 if __name__ == "__main__":
     denoised = False
-    clinical = True
+    clinical = False
     backbone = Backbone.EFFICIENTNET
-    task = Task.JOINT
+    task = Task.CLASSIFICATION
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     mask_only = True
     if task == task.CLASSIFICATION or task == task.JOINT:
