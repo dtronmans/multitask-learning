@@ -17,7 +17,7 @@ from train_scripts.mtl_training import return_model
 
 
 
-def test_model(model, dataloader, task, device, clinical, threshold=0.5, show=False):
+def test_model(model, dataloader, task, device, clinical, threshold=0.3, show=False):
     model.to(device)
     model.eval()
     correct_cls = 0

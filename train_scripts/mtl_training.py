@@ -42,10 +42,7 @@ def train(train_dataloader, test_dataloader, model, task, save_path, clinical):
             if clinical:
                 predicted_seg, predicted_cls = model(images, clinical_info)
             else:
-                if task == Task.CLASSIFICATION:
-                    predicted_cls = model(images)
-                else:
-                    predicted_seg, predicted_cls = model(images)
+                predicted_seg, predicted_cls = model(images)
 
             if task == Task.CLASSIFICATION:
                 loss = classification_criterion(predicted_cls, labels)
@@ -94,10 +91,7 @@ def train(train_dataloader, test_dataloader, model, task, save_path, clinical):
                 if clinical:
                     predicted_seg, predicted_cls = model(images, clinical_info)
                 else:
-                    if task == Task.CLASSIFICATION:
-                        predicted_cls = model(images)
-                    else:
-                        predicted_seg, predicted_cls = model(images)
+                    predicted_seg, predicted_cls = model(images)
 
                 if task == Task.CLASSIFICATION:
                     loss = classification_criterion(predicted_cls, labels)
