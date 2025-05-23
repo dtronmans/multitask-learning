@@ -49,7 +49,7 @@ def test_classification_only(model, dataloader, show=False):
 def test_segmentation_only(model, dataloader, show=False):
     ious = []
     with torch.no_grad():
-        for batch in dataloader:
+        for batch in tqdm(dataloader):
             image, label, mask = batch
             predicted, _ = model(image)
             predicted_mask = (torch.sigmoid(predicted[0]) > 0.5).float()
@@ -65,18 +65,16 @@ def test_segmentation_only(model, dataloader, show=False):
 
 
 if __name__ == "__main__":
-    directory = "OTU_2d"
+    directory = "../final_datasets/once_more/OTU_2d"
     eps = 1e-6
     dataset = MultimodalMMOTUDataset(directory, phase="test", paired_transform=DefaultPairedTransform())
     dataloader = DataLoader(dataset, batch_size=1, shuffle=False)
 
-    model = UNetClassificationOnly(1, 8)
+    model = EfficientUNetWithClassification(1, 1,   8)
     model.load_state_dict(
-        torch.load("models/mmotu/classification/unet_classification.pt", map_location=torch.device("cpu")))
+        torch.load("models/mmotu/joint/efficientnet_joint.pt", map_location=torch.device("cpu")))
     model.to(torch.device("cpu"))
 
     model.eval()
 
     test_classification_only(model, dataloader)
-
-    # now we need segmentation only, classification only and joint testing

@@ -17,7 +17,7 @@ from train_scripts.mtl_training import return_model
 
 
 
-def test_model(model, dataloader, task, device, clinical, threshold=0.3, show=False):
+def test_model(model, dataloader, task, device, clinical, threshold=0.5, show=False):
     model.to(device)
     model.eval()
     correct_cls = 0
@@ -124,7 +124,7 @@ def visualize_joint_prediction(images, pred_masks, preds, labels, clinical_info,
         clinical = clinical_info[i].int().tolist()
 
         menopausal_status = "pre" if clinical[0] == 0 else "post"
-        oncology_center = "true" if clinical[1] == 0 else "false"
+        oncology_center = "false" if clinical[1] == 0 else "true"
         clinical_text = f"menopausal status: {menopausal_status} | oncology center: {oncology_center}"
         image_path = image_paths[i] if isinstance(image_paths[i], str) else image_paths[i].decode('utf-8')
 
@@ -150,9 +150,9 @@ def visualize_joint_prediction(images, pred_masks, preds, labels, clinical_info,
 
 if __name__ == "__main__":
     denoised = False
-    clinical = False
+    clinical = True
     backbone = Backbone.EFFICIENTNET
-    task = Task.CLASSIFICATION
+    task = Task.JOINT
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     mask_only = True
     if task == task.CLASSIFICATION or task == task.JOINT:
@@ -179,4 +179,4 @@ if __name__ == "__main__":
 
     test_loader = DataLoader(test_dataset, batch_size=1, shuffle=True)
 
-    test_model(model, test_loader, task, device, clinical, show=True)
+    test_model(model, test_loader, task, device, clinical, show=False)
