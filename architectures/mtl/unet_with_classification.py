@@ -42,8 +42,10 @@ class UNetWithClinicalClassification(nn.Module):
         )
 
         self.classification_head = nn.Sequential(
-            nn.Dropout(p=0.2, inplace=True),
-            nn.Linear((1024 // factor) + 128, num_classification_classes)
+            nn.Linear(1024 + 128, 128),
+            nn.ReLU(),
+            nn.Dropout(0.4),
+            nn.Linear(128, 2)
         )
 
     def forward(self, x, clinical):

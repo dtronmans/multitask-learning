@@ -41,10 +41,10 @@ class EfficientUNetWithClinicalClassification(nn.Module):
 
         self.global_avg_pool = effnet.avgpool
         self.clinical_gate = nn.Sequential(
-            nn.Linear(1, 16),  # Input: center_type
+            nn.Linear(1, 16),
             nn.ReLU(),
-            nn.Linear(16, 1),  # Output: gating weight for menopausal
-            nn.Sigmoid()  # Output in range [0, 1]
+            nn.Linear(16, 1),
+            nn.Sigmoid()
         )
 
         # Clinical embedding after gating
@@ -55,7 +55,6 @@ class EfficientUNetWithClinicalClassification(nn.Module):
             nn.ReLU()
         )
 
-        # Classification head that takes image (1280) + clinical (128)
         self.classification_head = nn.Sequential(
             nn.Linear(1280 + 128, 128),
             nn.ReLU(),

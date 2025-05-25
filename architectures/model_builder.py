@@ -9,6 +9,7 @@ from architectures.classification_only.efficientnet_only_classification import E
 from architectures.mtl.efficientnet_with_classification import EfficientUNetWithClassification, \
     EfficientUNetWithClinicalClassification, transfer_weights_to_clinical_model
 from architectures.mtl.resnet_with_classification import ResNetUNetWithClinicalClassification
+from architectures.mtl.unet_with_classification import UNetWithClassification, UNetWithClinicalClassification
 from architectures.segmentation_only.efficientnet_only_segmentation import EfficientUNet
 from architectures.unet_parts import BasicUNet
 from enums import Task, Backbone
@@ -23,24 +24,21 @@ def return_model(task, backbone, denoised=False,
         base_path = os.path.join("models", "mmotu")
     if task == Task.JOINT:
         if backbone == Backbone.EFFICIENTNET:
+            if denoised:
+                base_path = os.path.join(base_path, "joint", "efficientnet_joint_denoised.pt")
+            else:
+                base_path = os.path.join(base_path, "joint", "efficientnet_joint.pt")
             if clinical:
                 old_model = EfficientUNetWithClassification(1, 1, 8)
-                if denoised:
-                    base_path = os.path.join(base_path, "joint", "efficientnet_joint_denoised.pt")
-                else:
-                    base_path = os.path.join(base_path, "joint", "efficientnet_joint.pt")
                 old_model.load_state_dict(
                     torch.load(base_path, weights_only=True,
                                map_location=torch.device(device)))
+                old_model.to(device)
                 new_model = EfficientUNetWithClinicalClassification(1, 1, 2)
                 new_model = transfer_weights_to_clinical_model(old_model, new_model)
                 new_model.to(device)
                 return new_model
             else:
-                if denoised:
-                    base_path = os.path.join(base_path, "joint", "efficientnet_joint_denoised.pt")
-                else:
-                    base_path = os.path.join(base_path, "joint", "efficientnet_joint.pt")
                 model = EfficientUNetWithClassification(1, 1, 8)
                 model.load_state_dict(torch.load(base_path, weights_only=True, map_location=device))
                 model.classification_head = nn.Sequential(
@@ -51,10 +49,32 @@ def return_model(task, backbone, denoised=False,
                 )
                 model.to(device)
                 return model
-        elif backbone == Backbone.RESNET:
-            model = ResNetUNetWithClinicalClassification(1, 1, 2)
-            model.to(device)
-            return model
+        elif backbone == Backbone.CLASSIC:
+            if denoised:
+                base_path = os.path.join(base_path, "joint", "unet_joint_denoised.pt")
+            else:
+                base_path = os.path.join(base_path, "joint", "unet_joint.pt")
+            if clinical:
+                old_model = UNetWithClassification(1, 1, 8)
+                old_model.load_state_dict(
+                    torch.load(base_path, weights_only=True,
+                               map_location=torch.device(device)))
+                old_model.to(device)
+                new_model = UNetWithClinicalClassification(1, 1, 2)
+                new_model = transfer_weights_to_clinical_model(old_model, new_model)
+                new_model.to(device)
+                return new_model
+            else:
+                model = UNetWithClassification(1, 1, 8)
+                model.load_state_dict(torch.load(base_path, weights_only=True, map_location=device))
+                model.classification_head = nn.Sequential(
+                    nn.Linear(1024, 128),
+                    nn.ReLU(),
+                    nn.Dropout(0.4),
+                    nn.Linear(128, 2)
+                )
+                model.to(device)
+                return model
     if task == Task.CLASSIFICATION:
         if backbone == Backbone.EFFICIENTNET:
             efficientnet_model = EfficientClassificationOnly(1, 8)
