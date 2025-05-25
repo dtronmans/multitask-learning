@@ -1,3 +1,4 @@
+import argparse
 import os
 
 import torch
@@ -161,10 +162,24 @@ def construct_save_path(denoised, backbone, task, clinical):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Model configuration")
+
+    parser.add_argument('--clinical', dest='clinical', action='store_true',
+                        help='Include clinical data (default: True)')
+    parser.add_argument('--no-clinical', dest='clinical', action='store_false', help='Exclude clinical data')
+
+    parser.add_argument('--task', type=str, choices=[t.value for t in Task], default='JOINT', help='Task type')
+    parser.add_argument('--backbone', type=str, choices=[b.value for b in Backbone], default='EFFICIENTNET',
+                        help='Backbone type')
+
+    parser.set_defaults(clinical=True)
+
+    args = parser.parse_args()
+
     denoised = False
-    clinical = True
-    backbone = Backbone.EFFICIENTNET
-    task = Task.CLASSIFICATION
+    clinical = args.clinical
+    backbone = Backbone(args.backbone)
+    task = Task(args.task)
     num_epochs, batch_size, learning_rate = 80, 8, 0.001
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

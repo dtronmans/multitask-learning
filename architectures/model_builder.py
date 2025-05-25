@@ -10,6 +10,7 @@ from architectures.mtl.efficientnet_with_classification import EfficientUNetWith
     EfficientUNetWithClinicalClassification, transfer_weights_to_clinical_model
 from architectures.mtl.resnet_with_classification import ResNetUNetWithClinicalClassification
 from architectures.segmentation_only.efficientnet_only_segmentation import EfficientUNet
+from architectures.unet_parts import BasicUNet
 from enums import Task, Backbone
 
 
@@ -97,5 +98,17 @@ def return_model(task, backbone, denoised=False,
                 torch.load(base_path,
                            weights_only=True,
                            map_location=device))
+            model.to(device)
+            return model
+        elif backbone == Backbone.CLASSIC:
+            model = BasicUNet(1, 1)
+            if denoised:
+                base_path = os.path.join(base_path, "segmentation", "unet_segmentation_denoised.pt")
+            else:
+                base_path = os.path.join(base_path, "segmentation", "unet_segmentation.pt")
+            model.load_state_dict(
+                torch.load(base_path, weights_only=True,
+                           map_location=device)
+            )
             model.to(device)
             return model
