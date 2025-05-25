@@ -122,13 +122,9 @@ def train(train_dataloader, test_dataloader, model, task, save_path, clinical):
         avg_val_loss = val_loss / len(test_dataloader)
         val_accuracy = 100 * correct_val / total_val if total_val > 0 else 0
 
-        if (task == Task.JOINT and val_accuracy > best_val_accuracy) or \
-                (task in [Task.CLASSIFICATION, Task.SEGMENTATION] and avg_val_loss < best_val_loss):
+        if avg_val_loss < best_val_loss:
             print("Saving best model so far!")
-            if task == Task.JOINT:
-                best_val_accuracy = val_accuracy
-            else:
-                best_val_loss = avg_val_loss
+            best_val_loss = avg_val_loss
             torch.save(model.state_dict(), save_path + ".pt")
         print(f"Epoch {epoch + 1}/{num_epochs} - Train Loss: {avg_train_loss:.4f} - Val Loss: {avg_val_loss:.4f}")
 
