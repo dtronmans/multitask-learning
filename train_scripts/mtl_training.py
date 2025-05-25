@@ -131,9 +131,7 @@ def train(train_dataloader, test_dataloader, model, task, save_path, clinical):
         if task in [Task.CLASSIFICATION, Task.JOINT]:
             print(f"Train Accuracy: {train_accuracy:.2f}% - Val Accuracy: {val_accuracy:.2f}%")
 
-    # Final model save
     print("Training complete.")
-    torch.save(model.state_dict(), save_path + "_final.pt")
 
 
 def construct_save_path(denoised, backbone, task, clinical):
