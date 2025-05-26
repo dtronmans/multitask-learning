@@ -32,18 +32,24 @@ class EfficientUNetWithClinicalClassification(nn.Module):
         self.classification_conv = nn.Sequential(features[7], features[8])
 
         # Decoder
-        self.up1 = UpMid(192, 80, 80, bilinear)
-        self.up2 = UpMid(80, 40, 40, bilinear)
-        self.up3 = UpMid(40, 24, 24, bilinear)
-        self.up4 = UpMid(24, 32, 16, bilinear)
-        self.final_up = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
+        self.up1 = UpMid(192, 80, 80, bilinear)  # From x6 (7×7, 192) and x4 (14×14, 80)
+        self.up2 = UpMid(80, 40, 40, bilinear)  # 14×14 → 28×28
+        self.up3 = UpMid(40, 24, 24, bilinear)  # 28×28 → 56×56
+        self.up4 = UpMid(24, 32, 16, bilinear)  # 56×56 → 112×112
+        self.final_up = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)  # 112×112 → 224×224
         self.outc = OutConv(16, n_segmentation_classes)
 
         self.global_avg_pool = effnet.avgpool
+        # self.clinical_gate = nn.Sequential(
+        #     nn.Linear(1, 16),
+        #     nn.ReLU(),
+        #     nn.Linear(16, 1),
+        #     nn.Sigmoid()
+        # )
 
-        # Simpler clinical embedding
+        # Clinical embedding after gating
         self.clinical_embedding = nn.Sequential(
-            nn.Linear(2, 64),
+            nn.Linear(1, 64),
             nn.ReLU(),
             nn.Linear(64, 128),
             nn.ReLU()
@@ -53,7 +59,7 @@ class EfficientUNetWithClinicalClassification(nn.Module):
             nn.Linear(1280 + 128, 128),
             nn.ReLU(),
             nn.Dropout(0.4),
-            nn.Linear(128, num_classification_classes)
+            nn.Linear(128, 2)
         )
 
     def forward(self, x, clinical):
@@ -73,15 +79,23 @@ class EfficientUNetWithClinicalClassification(nn.Module):
         x_seg = self.final_up(x_seg)
         seg_logits = self.outc(x_seg)
 
-        # Classification
         x_cls = self.classification_conv(x6)
         pooled = self.global_avg_pool(x_cls).view(x_cls.size(0), -1)  # (B, 1280)
+        menopausal = clinical[:, 0:1]  # (B, 1)
+        center_type = clinical[:, 1:2]  # (B, 1)
 
-        clinical_emb = self.clinical_embedding(clinical)  # (B, 128)
+        is_oncology = center_type
+        is_normal = 1 - is_oncology
+
+        centered_menopausal = menopausal * is_normal  # suppress it for oncology centers
+        clinical_input = centered_menopausal  # shape (B, 1)
+
+        clinical_emb = self.clinical_embedding(clinical_input)  # (B, 128)
         combined = torch.cat([pooled, clinical_emb], dim=1)  # (B, 1408)
         class_logits = self.classification_head(combined)
 
         return seg_logits, class_logits
+
 
 class EfficientUNetWithClassification(nn.Module):
     def __init__(self, n_channels, n_segmentation_classes, num_classification_classes, bilinear=False):
