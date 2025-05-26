@@ -42,8 +42,8 @@ def save_cropped_segmented_images(model, dataloader, destination_folder):
             x, y, w, h = cv2.boundingRect(largest_contour)
 
             # Add 20% padding
-            pad_x = int(0.1 * w)
-            pad_y = int(0.1 * h)
+            pad_x = int(0.01 * w)
+            pad_y = int(0.01 * h)
             x1 = max(x - pad_x, 0)
             y1 = max(y - pad_y, 0)
             x2 = min(x + w + pad_x, image_np.shape[1])
@@ -79,7 +79,7 @@ if __name__ == "__main__":
         transforms.ToTensor()
     ])
 
-    dataset = MedicalImageDataset(file_path, split="train", transform=transform, mask_only=False)
+    dataset = MedicalImageDataset(file_path, split="train", transform=None, mask_only=False)
     dataloader = DataLoader(dataset, batch_size=1, shuffle=True)
 
     model = EfficientUNet(1, 1)
