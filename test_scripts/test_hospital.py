@@ -15,9 +15,7 @@ from enums import Backbone, Task
 from train_scripts.mtl_training import return_model
 
 
-
-
-def test_model(model, dataloader, task, device, clinical, threshold=0.5, show=False):
+def test_model(model, dataloader, task, device, clinical, threshold=0.3, show=False):
     model.to(device)
     model.eval()
     correct_cls = 0
@@ -80,15 +78,16 @@ def test_model(model, dataloader, task, device, clinical, threshold=0.5, show=Fa
         specificity = true_negative / (true_negative + false_positive) if (true_negative + false_positive) > 0 else 0
 
         f1 = f1_score(all_labels, all_preds)
-        auc = roc_auc_score(all_labels, all_probs) if len(set(all_labels)) > 1 else float('nan')  # avoid AUC error if only one class
+        auc = roc_auc_score(all_labels, all_probs) if len(set(all_labels)) > 1 else float(
+            'nan')  # avoid AUC error if only one class
         precision = precision_score(all_labels, all_preds)
 
         print(f"Classification Accuracy: {acc:.2f}%")
         print(f"Sensitivity (Recall): {sensitivity:.4f}")
         print(f"Specificity: {specificity:.4f}")
-        print(f"F1 Score: {f1:.4f}")
-        print(f"Precision: {precision:.4f}")
-        print(f"AUC: {auc:.4f}")
+        # print(f"F1 Score: {f1:.4f}")
+        # print(f"Precision: {precision:.4f}")
+        # print(f"AUC: {auc:.4f}")
         print("\nConfusion Matrix:")
         print(f"TP: {true_positive} | FP: {false_positive}")
         print(f"FN: {false_negative} | TN: {true_negative}")
@@ -152,7 +151,7 @@ if __name__ == "__main__":
     denoised = False
     clinical = True
     backbone = Backbone.EFFICIENTNET
-    task = Task.JOINT
+    task = Task.CLASSIFICATION
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     mask_only = True
     if task == task.CLASSIFICATION or task == task.JOINT:
@@ -175,7 +174,7 @@ if __name__ == "__main__":
 
     print("dataset path: " + dataset_path)
     model = return_model(task, backbone, denoised, clinical)
-    model.load_state_dict(torch.load("models/hospital/joint/efficientnet_joint_clinical.pt", weights_only=True,
+    model.load_state_dict(torch.load("models/hospital/classification/efficientnet_classification_clinical.pt", weights_only=True,
                                      map_location=device))
 
     model.eval()

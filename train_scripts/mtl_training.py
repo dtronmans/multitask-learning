@@ -53,14 +53,15 @@ def train(train_dataloader, test_dataloader, model, task, save_path, clinical):
             elif task == Task.JOINT:
                 cls_loss = classification_criterion(predicted_cls, labels)
                 valid_mask_indices = (masks.flatten(1).sum(dim=1) > 0)  # shape: (batch_size,)
+                print(valid_mask_indices)
 
                 if valid_mask_indices.any():
                     valid_predicted_seg = predicted_seg[valid_mask_indices]
                     valid_masks = masks[valid_mask_indices]
                     seg_loss = segmentation_criterion(valid_predicted_seg, valid_masks)
-                    loss = seg_loss + 0.2 * cls_loss
+                    loss = seg_loss + 0.3 * cls_loss
                 else:
-                    loss = 0.2 * cls_loss
+                    loss = 0.3 * cls_loss
             else:
                 raise ValueError(f"Unsupported task type: {task}")
 
@@ -107,9 +108,9 @@ def train(train_dataloader, test_dataloader, model, task, save_path, clinical):
                         valid_predicted_seg = predicted_seg[valid_mask_indices]
                         valid_masks = masks[valid_mask_indices]
                         seg_loss = segmentation_criterion(valid_predicted_seg, valid_masks)
-                        loss = seg_loss + 0.2 * cls_loss
+                        loss = seg_loss + 0.3 * cls_loss
                     else:
-                        loss = 0.2 * cls_loss
+                        loss = 0.3 * cls_loss
 
                 val_loss += loss.item()
 
@@ -185,7 +186,7 @@ if __name__ == "__main__":
     if denoised:
         dataset_path = os.path.join(dataset_path, "mtl_denoised")
     else:
-        dataset_path = os.path.join(dataset_path, "mtl_final")
+        dataset_path = os.path.join(dataset_path, "mtl_cropped")
 
     mask_only = True
     if task == task.CLASSIFICATION or task == task.JOINT:
@@ -195,7 +196,7 @@ if __name__ == "__main__":
 
     save_path = construct_save_path(denoised, backbone, task, clinical)
     print("Save path: " + save_path)
-    pair_transform = PairedTransform(size=(336, 544))
+    pair_transform = PairedTransform(size=(164, 164))
 
     train_dataset = MedicalImageDataset(dataset_path, split="train", mask_only=mask_only, transform=pair_transform)
     val_dataset = MedicalImageDataset(dataset_path, split="val", mask_only=mask_only)

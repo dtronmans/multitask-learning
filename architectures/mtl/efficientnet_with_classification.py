@@ -175,11 +175,11 @@ def transfer_weights_to_clinical_model(old_model, new_model):
         if key in old_state_dict:
             if old_state_dict[key].shape == new_state_dict[key].shape:
                 transferred_state_dict[key] = old_state_dict[key]
-            else:
-                print(
-                    f"Skipped (shape mismatch): {key} | old: {old_state_dict[key].shape}, new: {new_state_dict[key].shape}")
-        else:
-            print(f"Skipped (not found): {key}")
+        #     else:
+        #         print(
+        #             f"Skipped (shape mismatch): {key} | old: {old_state_dict[key].shape}, new: {new_state_dict[key].shape}")
+        # else:
+        #     print(f"Skipped (not found): {key}")
 
     # Load the matching parameters into the new model
     new_model.load_state_dict(transferred_state_dict, strict=False)

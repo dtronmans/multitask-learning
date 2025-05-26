@@ -79,10 +79,11 @@ if __name__ == "__main__":
         transforms.ToTensor()
     ])
 
-    dataset = MedicalImageDataset(file_path, split="train", transform=None, mask_only=False)
-    dataloader = DataLoader(dataset, batch_size=1, shuffle=True)
+    for dataset_type in ["train", "val", "test"]:
+        dataset = MedicalImageDataset(file_path, split=dataset_type, transform=None, mask_only=False)
+        dataloader = DataLoader(dataset, batch_size=1, shuffle=True)
 
-    model = EfficientUNet(1, 1)
-    model.load_state_dict(torch.load(model_path, map_location=torch.device("cpu")))
+        model = EfficientUNet(1, 1)
+        model.load_state_dict(torch.load(model_path, map_location=torch.device("cpu")))
 
-    save_cropped_segmented_images(model, dataloader, destination_folder)
+        save_cropped_segmented_images(model, dataloader, destination_folder)
