@@ -40,26 +40,25 @@ class EfficientUNetWithClinicalClassification(nn.Module):
         self.outc = OutConv(16, n_segmentation_classes)
 
         self.global_avg_pool = effnet.avgpool
-        self.clinical_gate = nn.Sequential(
-            nn.Linear(1, 16),
+        self.gate = nn.Sequential(
+            nn.Linear(1, 8),
             nn.ReLU(),
-            nn.Linear(16, 1),
+            nn.Linear(8, 1),
             nn.Sigmoid()
         )
 
-        # Clinical embedding after gating
-        self.clinical_embedding = nn.Sequential(
+        self.clinical_proj = nn.Sequential(
             nn.Linear(2, 64),
             nn.ReLU(),
             nn.Linear(64, 128),
             nn.ReLU()
         )
 
-        self.classification_head = nn.Sequential(
-            nn.Linear(1280 + 128, 128),
+        self.classifier = nn.Sequential(
+            nn.Linear(1280 + 128, 256),
             nn.ReLU(),
             nn.Dropout(0.4),
-            nn.Linear(128, 2)
+            nn.Linear(256, 2)
         )
 
     def forward(self, x, clinical):
@@ -81,17 +80,20 @@ class EfficientUNetWithClinicalClassification(nn.Module):
 
         x_cls = self.classification_conv(x6)
         pooled = self.global_avg_pool(x_cls).view(x_cls.size(0), -1)  # (B, 1280)
-        menopausal = clinical[:, 0:1]  # (B, 1)
-        center_type = clinical[:, 1:2]  # (B, 1)
-        gate = 1 - self.clinical_gate(center_type)  # (B, 1), so higher center_type → lower influence
-        modulated_menopausal = menopausal * gate  # (B, 1)
+        menopause = clinical[:, 0:1]  # shape [B, 1]
+        hospital = clinical[:, 1:2]   # shape [B, 1]
 
-        clinical_input = torch.cat([modulated_menopausal, center_type], dim=1)  # (B, 2)
-        clinical_emb = self.clinical_embedding(clinical_input)  # (B, 128)
-        combined = torch.cat([pooled, clinical_emb], dim=1)  # (B, 1408)
-        class_logits = self.classification_head(combined)
+        gate_value = self.gate(hospital)       # shape [B, 1], sigmoid output
+        gated_menopause = gate_value * menopause  # shape [B, 1]
 
-        return seg_logits, class_logits
+        # Replace menopause with gated version
+        gated_clinical = torch.cat([gated_menopause, hospital], dim=1)
+
+        clinical_embedding = self.clinical_proj(gated_clinical)  # shape [B, 128]
+        x = torch.cat((pooled, clinical_embedding), dim=1)  # shape: (B, 1408)
+        out = self.classifier(x)
+
+        return seg_logits, out
 
 
 class EfficientUNetWithClassification(nn.Module):
