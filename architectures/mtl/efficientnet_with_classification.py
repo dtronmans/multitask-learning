@@ -32,24 +32,25 @@ class EfficientUNetWithClinicalClassification(nn.Module):
         self.classification_conv = nn.Sequential(features[7], features[8])
 
         # Decoder
-        self.up1 = UpMid(192, 80, 80, bilinear)  # From x6 (7×7, 192) and x4 (14×14, 80)
-        self.up2 = UpMid(80, 40, 40, bilinear)  # 14×14 → 28×28
-        self.up3 = UpMid(40, 24, 24, bilinear)  # 28×28 → 56×56
-        self.up4 = UpMid(24, 32, 16, bilinear)  # 56×56 → 112×112
-        self.final_up = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)  # 112×112 → 224×224
+        self.up1 = UpMid(192, 80, 80, bilinear)
+        self.up2 = UpMid(80, 40, 40, bilinear)
+        self.up3 = UpMid(40, 24, 24, bilinear)
+        self.up4 = UpMid(24, 32, 16, bilinear)
+        self.final_up = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
         self.outc = OutConv(16, n_segmentation_classes)
 
         self.global_avg_pool = effnet.avgpool
-        self.clinical_gate = nn.Sequential(
-            nn.Linear(1, 16),
+
+        # Conditional Clinical Embedding Networks
+        self.clinical_embedding_normal = nn.Sequential(
+            nn.Linear(1, 64),
             nn.ReLU(),
-            nn.Linear(16, 1),
-            nn.Sigmoid()
+            nn.Linear(64, 128),
+            nn.ReLU()
         )
 
-        # Clinical embedding after gating
-        self.clinical_embedding = nn.Sequential(
-            nn.Linear(2, 64),
+        self.clinical_embedding_oncology = nn.Sequential(
+            nn.Linear(1, 64),
             nn.ReLU(),
             nn.Linear(64, 128),
             nn.ReLU()
@@ -79,16 +80,26 @@ class EfficientUNetWithClinicalClassification(nn.Module):
         x_seg = self.final_up(x_seg)
         seg_logits = self.outc(x_seg)
 
+        # Image-based features
         x_cls = self.classification_conv(x6)
         pooled = self.global_avg_pool(x_cls).view(x_cls.size(0), -1)  # (B, 1280)
+
+        # Clinical logic
         menopausal = clinical[:, 0:1]  # (B, 1)
         center_type = clinical[:, 1:2]  # (B, 1)
-        gate = 1 - self.clinical_gate(center_type)  # (B, 1), so higher center_type → lower influence
-        modulated_menopausal = menopausal * gate  # (B, 1)
 
-        clinical_input = torch.cat([modulated_menopausal, center_type], dim=1)  # (B, 2)
-        clinical_emb = self.clinical_embedding(clinical_input)  # (B, 128)
-        combined = torch.cat([pooled, clinical_emb], dim=1)  # (B, 1408)
+        is_oncology = (center_type > 0.5).float()
+        is_normal = 1.0 - is_oncology
+
+        # Use menopausal status only in normal centers
+        normal_clinical_emb = self.clinical_embedding_normal(menopausal)
+        dummy_input = torch.zeros_like(menopausal)
+        oncology_clinical_emb = self.clinical_embedding_oncology(dummy_input)
+
+        clinical_emb = is_normal * normal_clinical_emb + is_oncology * oncology_clinical_emb
+
+        # Combine with image features
+        combined = torch.cat([pooled, clinical_emb], dim=1)
         class_logits = self.classification_head(combined)
 
         return seg_logits, class_logits
