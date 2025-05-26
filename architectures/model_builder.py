@@ -6,6 +6,7 @@ from torchvision.models import efficientnet_b0, EfficientNet_B0_Weights
 
 from architectures.classification_only.efficientnet_only_classification import EfficientNetClinical, \
     EfficientClassificationOnly
+from architectures.classification_only.unet_classification_only import UNetClassificationOnly
 from architectures.mtl.efficientnet_with_classification import EfficientUNetWithClassification, \
     EfficientUNetWithClinicalClassification, transfer_weights_to_clinical_model
 from architectures.mtl.resnet_with_classification import ResNetUNetWithClinicalClassification
@@ -107,6 +108,18 @@ def return_model(task, backbone, denoised=False,
                 )
                 efficientnet_model.to(device)
                 return efficientnet_model
+        elif backbone == Backbone.CLASSIC:
+            unet_model = UNetClassificationOnly(1, 8)
+            if denoised:
+                base_path = os.path.join(base_path, "classification", "unet_classification_denoised.pt")
+            else:
+                base_path = os.path.join(base_path, "classification", "unet_classification.pt")
+            unet_model.load_state_dict(
+                torch.load(
+                    base_path,
+                    weights_only=True,
+                    map_location=torch.device(device)))
+            unet_model.to(device)
     if task == Task.SEGMENTATION:
         if backbone == Backbone.EFFICIENTNET:
             model = EfficientUNet(1, 1)

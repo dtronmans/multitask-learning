@@ -25,7 +25,6 @@ def train(train_dataloader, test_dataloader, model, task, save_path, clinical):
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
     best_val_loss = np.inf
-    best_val_accuracy = 0.0
     for epoch in range(num_epochs):
         print(f"\nEpoch {epoch + 1}/{num_epochs}")
         print("-" * 20)

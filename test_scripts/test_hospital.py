@@ -158,6 +158,10 @@ if __name__ == "__main__":
     if task == task.CLASSIFICATION or task == task.JOINT:
         mask_only = False
 
+    print("backbone: " + str(backbone))
+    print("clinical: " + str(clinical))
+    print("task: " + str(task))
+
     transform = transforms.Compose([
         transforms.Resize((336, 544)),
         transforms.ToTensor()
