@@ -30,10 +30,6 @@ class PairedTransform:
             image = F.hflip(image)
             mask = F.hflip(mask)
 
-        # if random.random() < self.flip_prob:
-        #     image = F.vflip(image)
-        #     mask = F.vflip(mask)
-
         # Random rotation
         angle = random.uniform(-self.rotation_degrees, self.rotation_degrees)
         image = F.rotate(image, angle, fill=0)
