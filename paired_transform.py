@@ -6,8 +6,8 @@ class PairedTransform:
     def __init__(
         self,
         size=(336, 544),
-        flip_prob=0.4,
-        rotation_degrees=20,
+        flip_prob=0.5,
+        rotation_degrees=10,
         affine_params=None
     ):
         self.size = size  # (H, W)
@@ -32,8 +32,8 @@ class PairedTransform:
 
         # Random rotation
         angle = random.uniform(-self.rotation_degrees, self.rotation_degrees)
-        image = F.rotate(image, angle, fill=0)
-        mask = F.rotate(mask, angle, fill=0)
+        # image = F.rotate(image, angle, fill=0)
+        # mask = F.rotate(mask, angle, fill=0)
 
         # Random affine
         affine_angle = random.uniform(-self.affine_params["degrees"], self.affine_params["degrees"])
@@ -44,8 +44,8 @@ class PairedTransform:
         scale = random.uniform(*self.affine_params["scale"])
         shear = self.affine_params["shear"] or [0.0, 0.0]
 
-        image = F.affine(image, affine_angle, translate, scale, shear, fill=0)
-        mask = F.affine(mask, affine_angle, translate, scale, shear, fill=0)
+        # image = F.affine(image, affine_angle, translate, scale, shear, fill=0)
+        # mask = F.affine(mask, affine_angle, translate, scale, shear, fill=0)
 
         # Convert to tensor
         image = F.to_tensor(image)

@@ -6,7 +6,7 @@ from torch.utils.data import Dataset
 from torchvision import transforms
 import matplotlib.pyplot as plt
 
-from paired_transform import DefaultPairedTransform
+from paired_transform import DefaultPairedTransform, PairedTransform
 
 
 class MultimodalMMOTUDataset(Dataset):
@@ -122,15 +122,15 @@ class MedicalImageDataset(Dataset):
         if sample['mask_path']:
             mask = Image.open(sample['mask_path']).convert('L')
         else:
-            mask = Image.new('L', (164, 164))  # Create empty black mask if not available
+            mask = Image.new('L', (544, 336))  # Create empty black mask if not available
 
         if self.transform:
             image, mask = self.transform(image, mask)
         else:
             # Default deterministic transform
-            image = transforms.Resize((164, 164))(image)
+            image = transforms.Resize((336, 544))(image)
             image = transforms.ToTensor()(image)
-            mask = transforms.Resize((164, 164))(mask)
+            mask = transforms.Resize((336, 544))(mask)
             mask = transforms.ToTensor()(mask)
 
         return {
@@ -203,7 +203,7 @@ if __name__ == "__main__":
         transforms.Resize((336, 544)),
         transforms.ToTensor()
     ])
-    dataset = MedicalImageDataset("../final_datasets/once_more/mtl_final", split="train", transform=transform,
-                                  mask_only=True)
+    dataset = MedicalImageDataset("../final_datasets/once_more/mtl_final", split="train", transform=PairedTransform(),
+                                  mask_only=False)
     for i in range(len(dataset)):
         dataset.display(i)
