@@ -14,13 +14,13 @@ from architectures.mtl.efficientnet_with_classification import EfficientUNetWith
 from dataset import MedicalImageDataset
 from enums import Backbone, Task
 from paired_transform import PairedTransform
-from train_scripts.losses import DiceLossWithSigmoid, FocalLoss
+from train_scripts.losses import DiceLossWithSigmoid
 
 
 def train(train_dataloader, test_dataloader, model, task, save_path, clinical):
     print("Task: " + str(task))
     class_weights = torch.tensor([1.0, 2.0]).to(device)
-    classification_criterion = FocalLoss()
+    classification_criterion = nn.CrossEntropyLoss()
     segmentation_criterion = DiceLossWithSigmoid()
     optimizer = optim.Adam(model.parameters(), lr=1e-4, weight_decay=1e-5)
 
@@ -58,9 +58,9 @@ def train(train_dataloader, test_dataloader, model, task, save_path, clinical):
                     valid_predicted_seg = predicted_seg[valid_mask_indices]
                     valid_masks = masks[valid_mask_indices]
                     seg_loss = segmentation_criterion(valid_predicted_seg, valid_masks)
-                    loss = seg_loss + 0.4 * cls_loss
+                    loss = seg_loss + 0.3 * cls_loss
                 else:
-                    loss = 0.4 * cls_loss
+                    loss = 0.3 * cls_loss
             else:
                 raise ValueError(f"Unsupported task type: {task}")
 
@@ -107,9 +107,9 @@ def train(train_dataloader, test_dataloader, model, task, save_path, clinical):
                         valid_predicted_seg = predicted_seg[valid_mask_indices]
                         valid_masks = masks[valid_mask_indices]
                         seg_loss = segmentation_criterion(valid_predicted_seg, valid_masks)
-                        loss = seg_loss + 0.4 * cls_loss
+                        loss = seg_loss + 0.3 * cls_loss
                     else:
-                        loss = 0.4 * cls_loss
+                        loss = 0.3 * cls_loss
 
                 val_loss += loss.item()
 
