@@ -6,7 +6,7 @@ from architectures.unet_parts import EfficientDown, UpMid, OutConv
 
 
 class EfficientUNetWithClinicalClassification(nn.Module):
-    def __init__(self, n_channels, n_segmentation_classes, num_classification_classes, bilinear=False):
+    def __init__(self, n_channels, n_segmentation_classes, num_classification_classes=2, bilinear=False):
         super(EfficientUNetWithClinicalClassification, self).__init__()
         self.n_channels = n_channels
         self.n_classes = n_segmentation_classes
@@ -29,14 +29,16 @@ class EfficientUNetWithClinicalClassification(nn.Module):
         self.mid = features[5]
         self.segmentation_deep = features[6]
 
-        self.classification_conv = nn.Sequential(features[7], features[8])
+        # Removed: self.classification_conv = nn.Sequential(features[7], features[8])
+        # Add remaining layers to segmentation_deep to extend shared encoder
+        self.extra_shared_layers = nn.Sequential(features[7], features[8])  # Now shared
 
         # Decoder
-        self.up1 = UpMid(192, 80, 80, bilinear)  # From x6 (7×7, 192) and x4 (14×14, 80)
-        self.up2 = UpMid(80, 40, 40, bilinear)  # 14×14 → 28×28
-        self.up3 = UpMid(40, 24, 24, bilinear)  # 28×28 → 56×56
-        self.up4 = UpMid(24, 32, 16, bilinear)  # 56×56 → 112×112
-        self.final_up = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)  # 112×112 → 224×224
+        self.up1 = UpMid(192, 80, 80, bilinear)
+        self.up2 = UpMid(80, 40, 40, bilinear)
+        self.up3 = UpMid(40, 24, 24, bilinear)
+        self.up4 = UpMid(24, 32, 16, bilinear)
+        self.final_up = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
         self.outc = OutConv(16, n_segmentation_classes)
 
         self.global_avg_pool = effnet.avgpool
@@ -58,7 +60,7 @@ class EfficientUNetWithClinicalClassification(nn.Module):
             nn.Linear(1280 + 128, 256),
             nn.ReLU(),
             nn.Dropout(0.4),
-            nn.Linear(256, 2)
+            nn.Linear(256, num_classification_classes)
         )
 
     def forward(self, x, clinical):
@@ -69,8 +71,9 @@ class EfficientUNetWithClinicalClassification(nn.Module):
         x4 = self.down4(x3)
         x5 = self.mid(x4)
         x6 = self.segmentation_deep(x5)
+        x_cls = self.extra_shared_layers(x6)  # Shared features for both heads
 
-        # Segmentation decoder
+        # Segmentation decoder (unchanged)
         x_seg = self.up1(x6, x4)
         x_seg = self.up2(x_seg, x3)
         x_seg = self.up3(x_seg, x2)
@@ -78,19 +81,16 @@ class EfficientUNetWithClinicalClassification(nn.Module):
         x_seg = self.final_up(x_seg)
         seg_logits = self.outc(x_seg)
 
-        x_cls = self.classification_conv(x6)
+        # Classification head
         pooled = self.global_avg_pool(x_cls).view(x_cls.size(0), -1)  # (B, 1280)
-        menopause = clinical[:, 0:1]  # shape [B, 1]
-        hospital = clinical[:, 1:2]   # shape [B, 1]
+        menopause = clinical[:, 0:1]
+        hospital = clinical[:, 1:2]
 
-        gate_value = self.gate(hospital)       # shape [B, 1], sigmoid output
-        gated_menopause = gate_value * menopause  # shape [B, 1]
-
-        # Replace menopause with gated version
+        gate_value = self.gate(hospital)
+        gated_menopause = gate_value * menopause
         gated_clinical = torch.cat([gated_menopause, hospital], dim=1)
-
-        clinical_embedding = self.clinical_proj(gated_clinical)  # shape [B, 128]
-        x = torch.cat((pooled, clinical_embedding), dim=1)  # shape: (B, 1408)
+        clinical_embedding = self.clinical_proj(gated_clinical)
+        x = torch.cat((pooled, clinical_embedding), dim=1)
         out = self.classifier(x)
 
         return seg_logits, out
