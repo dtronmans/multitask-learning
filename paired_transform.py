@@ -32,8 +32,9 @@ class PairedTransform:
 
         # Random rotation
         angle = random.uniform(-self.rotation_degrees, self.rotation_degrees)
-        # image = F.rotate(image, angle, fill=0)
-        # mask = F.rotate(mask, angle, fill=0)
+        if random.random() < self.flip_prob:
+            image = F.rotate(image, angle, fill=0)
+            mask = F.rotate(mask, angle, fill=0)
 
         # Random affine
         affine_angle = random.uniform(-self.affine_params["degrees"], self.affine_params["degrees"])

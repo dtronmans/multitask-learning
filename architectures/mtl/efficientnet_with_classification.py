@@ -55,10 +55,10 @@ class EfficientUNetWithClinicalClassification(nn.Module):
         )
 
         self.classifier = nn.Sequential(
-            nn.Linear(1280 + 128, 256),
+            nn.Linear(1280 + 128, 128),
             nn.ReLU(),
-            nn.Dropout(0.4),
-            nn.Linear(256, 2)
+            nn.Dropout(0.5),
+            nn.Linear(128, 2)
         )
 
     def forward(self, x, clinical):
