@@ -79,8 +79,7 @@ class EfficientUNetWithClinicalClassification(nn.Module):
         x_seg = self.final_up(x_seg)
         seg_logits = self.outc(x_seg)
 
-        x_cls = self.classification_conv(x6)
-        pooled = self.global_avg_pool(x_cls).view(x_cls.size(0), -1)  # (B, 1280)
+        pooled = self.global_avg_pool(x7).view(x7.size(0), -1)  # (B, 1280)
         menopause = clinical[:, 0:1]  # shape [B, 1]
         hospital = clinical[:, 1:2]   # shape [B, 1]
 
