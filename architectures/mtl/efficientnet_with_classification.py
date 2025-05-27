@@ -71,10 +71,13 @@ class EfficientUNetWithClinicalClassification(nn.Module):
         x4 = self.down4(x3)
         x5 = self.mid(x4)
         x6 = self.segmentation_deep(x5)
-        x_cls = self.extra_shared_layers(x6)  # Shared features for both heads
+        x7 = self.extra_shared_layers(x6)
 
-        # Segmentation decoder (unchanged)
-        x_seg = self.up1(x6, x4)
+        # Shared features for both heads
+        x_shared = x7
+
+        # Segmentation decoder
+        x_seg = self.up1(x_shared, x4)
         x_seg = self.up2(x_seg, x3)
         x_seg = self.up3(x_seg, x2)
         x_seg = self.up4(x_seg, x0)
@@ -82,7 +85,8 @@ class EfficientUNetWithClinicalClassification(nn.Module):
         seg_logits = self.outc(x_seg)
 
         # Classification head
-        pooled = self.global_avg_pool(x_cls).view(x_cls.size(0), -1)  # (B, 1280)
+        x_cls = x_shared
+        pooled = self.global_avg_pool(x_cls).view(x_cls.size(0), -1)
         menopause = clinical[:, 0:1]
         hospital = clinical[:, 1:2]
 
