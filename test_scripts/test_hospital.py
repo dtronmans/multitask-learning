@@ -85,9 +85,9 @@ def test_model(model, dataloader, task, device, clinical, threshold=0.5, show=Fa
         print(f"Classification Accuracy: {acc:.2f}%")
         print(f"Sensitivity (Recall): {sensitivity:.4f}")
         print(f"Specificity: {specificity:.4f}")
-        # print(f"F1 Score: {f1:.4f}")
-        # print(f"Precision: {precision:.4f}")
-        # print(f"AUC: {auc:.4f}")
+        print(f"F1 Score: {f1:.4f}")
+        print(f"Precision: {precision:.4f}")
+        print(f"AUC: {auc:.4f}")
         print("\nConfusion Matrix:")
         print(f"TP: {true_positive} | FP: {false_positive}")
         print(f"FN: {false_negative} | TN: {true_negative}")
@@ -170,7 +170,7 @@ if __name__ == "__main__":
     if denoised:
         dataset_path = os.path.join(dataset_path, "mtl_denoised")
     else:
-        dataset_path = os.path.join(dataset_path, "mtl_cropped")
+        dataset_path = os.path.join(dataset_path, "mtl_final")
 
     print("dataset path: " + dataset_path)
     model = return_model(task, backbone, denoised, clinical)
@@ -182,4 +182,4 @@ if __name__ == "__main__":
 
     test_loader = DataLoader(test_dataset, batch_size=1, shuffle=True)
 
-    test_model(model, test_loader, task, device, clinical, show=True)
+    test_model(model, test_loader, task, device, clinical, show=False)
