@@ -6,70 +6,68 @@ from architectures.unet_parts import EfficientDown, UpMid, OutConv
 
 
 class EfficientUNetWithClinicalClassification(nn.Module):
-    def __init__(self, n_channels, n_segmentation_classes, num_classification_classes=2, bilinear=False):
+    def __init__(self, in_channels=1, n_segmentation_classes=1, num_classes=2, bilinear=False):
         super(EfficientUNetWithClinicalClassification, self).__init__()
-        self.n_channels = n_channels
-        self.n_classes = n_segmentation_classes
-        self.num_classes = num_classification_classes
-        self.bilinear = bilinear
 
-        effnet = efficientnet_b0(weights=EfficientNet_B0_Weights.IMAGENET1K_V1)
-        features = list(effnet.features.children())
-
-        # Encoder
-        self.inc = nn.Sequential(
-            nn.Conv2d(n_channels, 3, kernel_size=1),
-            features[0]
+        # Load pretrained EfficientNet
+        base_model = efficientnet_b0(weights=EfficientNet_B0_Weights.IMAGENET1K_V1)
+        base_model.features[0][0] = nn.Conv2d(
+            in_channels, 32, kernel_size=3, stride=2, padding=1, bias=False
         )
-        self.down1 = EfficientDown([features[1]])
-        self.down2 = EfficientDown([features[2]])
-        self.down3 = EfficientDown([features[3]])
-        self.down4 = EfficientDown([features[4]])
+        self.base_model = base_model
 
-        self.mid = features[5]
-        self.segmentation_deep = features[6]
+        # Encoder feature blocks from EfficientNet
+        features = list(base_model.features.children())
+        self.inc = features[0]  # Output: 32
+        self.down1 = features[1]  # Output: 16
+        self.down2 = features[2]  # Output: 24
+        self.down3 = features[3]  # Output: 40
+        self.down4 = features[4]  # Output: 80
+        self.mid = features[5]    # Output: 112
+        self.deep = features[6]   # Output: 192
 
-        self.classification_conv = nn.Sequential(features[7], features[8])
+        self.classification_conv = nn.Sequential(features[7], features[8])  # Output: 1280
 
-        # Decoder
-        self.up1 = UpMid(1280, 80, 80, bilinear)  # From x6 (7×7, 192) and x4 (14×14, 80)
-        self.up2 = UpMid(80, 40, 40, bilinear)  # 14×14 → 28×28
-        self.up3 = UpMid(40, 24, 24, bilinear)  # 28×28 → 56×56
-        self.up4 = UpMid(24, 32, 16, bilinear)  # 56×56 → 112×112
-        self.final_up = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)  # 112×112 → 224×224
-        self.outc = OutConv(16, n_segmentation_classes)
+        # Decoder using your UpMid blocks
+        self.up1 = UpMid(1280, 80, 80, bilinear)
+        self.up2 = UpMid(80, 40, 40, bilinear)
+        self.up3 = UpMid(40, 24, 24, bilinear)
+        self.up4 = UpMid(24, 32, 16, bilinear)
 
-        self.global_avg_pool = effnet.avgpool
+        self.final_up = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
+        self.outc = nn.Conv2d(16, n_segmentation_classes, kernel_size=1)
+
+        # Clinical classification components
+        self.global_avg_pool = base_model.avgpool
         self.gate = nn.Sequential(
             nn.Linear(1, 8),
             nn.ReLU(),
             nn.Linear(8, 1),
             nn.Sigmoid()
         )
-
         self.clinical_proj = nn.Sequential(
             nn.Linear(2, 64),
             nn.ReLU(),
             nn.Linear(64, 128),
             nn.ReLU()
         )
-
         self.classifier = nn.Sequential(
-            nn.Linear(1280 + 128, 128),
+            nn.Linear(1280 + 128, 256),
             nn.ReLU(),
-            nn.Dropout(0.5),
-            nn.Linear(128, 2)
+            nn.Dropout(0.4),
+            nn.Linear(256, num_classes)
         )
 
     def forward(self, x, clinical):
+        # Encoder path
         x0 = self.inc(x)
         x1 = self.down1(x0)
         x2 = self.down2(x1)
         x3 = self.down3(x2)
         x4 = self.down4(x3)
         x5 = self.mid(x4)
-        x6 = self.segmentation_deep(x5)
-        x7 = self.classification_conv(x6)
+        x6 = self.deep(x5)
+        x7 = self.classification_conv(x6)  # 1280 features
 
         # Segmentation decoder
         x_seg = self.up1(x7, x4)
@@ -79,21 +77,20 @@ class EfficientUNetWithClinicalClassification(nn.Module):
         x_seg = self.final_up(x_seg)
         seg_logits = self.outc(x_seg)
 
-        pooled = self.global_avg_pool(x7).view(x7.size(0), -1)  # (B, 1280)
-        menopause = clinical[:, 0:1]  # shape [B, 1]
-        hospital = clinical[:, 1:2]   # shape [B, 1]
+        # Classification path
+        pooled = self.global_avg_pool(x7).view(x7.size(0), -1)  # Shape: [B, 1280]
 
-        gate_value = self.gate(hospital)       # shape [B, 1], sigmoid output
-        gated_menopause = gate_value * menopause  # shape [B, 1]
-
-        # Replace menopause with gated version
+        menopause = clinical[:, 0:1]
+        hospital = clinical[:, 1:2]
+        gate_value = self.gate(hospital)
+        gated_menopause = gate_value * menopause
         gated_clinical = torch.cat([gated_menopause, hospital], dim=1)
 
-        clinical_embedding = self.clinical_proj(gated_clinical)  # shape [B, 128]
-        x = torch.cat((pooled, clinical_embedding), dim=1)  # shape: (B, 1408)
-        out = self.classifier(x)
+        clinical_embedding = self.clinical_proj(gated_clinical)
+        x_cls = torch.cat((pooled, clinical_embedding), dim=1)
+        cls_logits = self.classifier(x_cls)
 
-        return seg_logits, out
+        return seg_logits, cls_logits
 
 
 class EfficientUNetWithClassification(nn.Module):
@@ -123,11 +120,11 @@ class EfficientUNetWithClassification(nn.Module):
         self.classification_conv = nn.Sequential(features[7], features[8])
 
         # Decoder
-        self.up1 = UpMid(192, 80, 80, bilinear)  # From x6 (7×7, 192) and x4 (14×14, 80)
-        self.up2 = UpMid(80, 40, 40, bilinear)  # 14×14 → 28×28
-        self.up3 = UpMid(40, 24, 24, bilinear)  # 28×28 → 56×56
-        self.up4 = UpMid(24, 32, 16, bilinear)  # 56×56 → 112×112
-        self.final_up = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)  # 112×112 → 224×224
+        self.up1 = UpMid(192, 80, 80, bilinear)
+        self.up2 = UpMid(80, 40, 40, bilinear)
+        self.up3 = UpMid(40, 24, 24, bilinear)
+        self.up4 = UpMid(24, 32, 16, bilinear)
+        self.final_up = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
         self.outc = OutConv(16, n_segmentation_classes)
 
         self.global_avg_pool = effnet.avgpool
