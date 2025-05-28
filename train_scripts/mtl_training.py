@@ -20,7 +20,7 @@ from train_scripts.losses import DiceLossWithSigmoid
 def train(train_dataloader, test_dataloader, model, task, save_path, clinical):
     print("Task: " + str(task))
     class_weights = torch.tensor([1.0, 2.0]).to(device)
-    classification_criterion = nn.CrossEntropyLoss()
+    classification_criterion = nn.CrossEntropyLoss(weight=class_weights)
     segmentation_criterion = DiceLossWithSigmoid()
     optimizer = optim.Adam(model.parameters(), lr=1e-4, weight_decay=1e-5)
 
