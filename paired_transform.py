@@ -14,7 +14,7 @@ class PairedTransform:
             rotation_degrees=20,
             affine_params=None
     ):
-        self.size = size  # (H, W)
+        self.size = size
         self.flip_prob = flip_prob
         self.rotation_degrees = rotation_degrees
         self.affine_params = affine_params or {
