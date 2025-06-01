@@ -25,8 +25,8 @@ def train(train_dataloader, test_dataloader, model, task, save_path, clinical):
         labels.append(batch['label'])
     all_labels = torch.cat(labels)
     pos_weight = (all_labels == 0).sum() / (all_labels == 1).sum()
-    class_weights = torch.tensor([1.0, pos_weight.item()]).to(device)
-    classification_criterion = nn.CrossEntropyLoss(weight=torch.tensor([1.0, 2.0]).to(device))
+    class_weights = torch.tensor([1.0, 2.0]).to(device)
+    classification_criterion = nn.CrossEntropyLoss(weight=class_weights)
     segmentation_criterion = DiceLossWithSigmoid()
     optimizer = optim.Adam(model.parameters(), lr=1e-4, weight_decay=1e-5)
 
