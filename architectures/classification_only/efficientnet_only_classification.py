@@ -3,23 +3,23 @@ import torch.nn as nn
 from torchvision.models import efficientnet_b0, EfficientNet_B0_Weights
 
 
-
 class EfficientNetClinical(nn.Module):
     def __init__(self, backbone_model, clinical_feature_dim=2, num_classes=2):
         super(EfficientNetClinical, self).__init__()
         self.backbone = backbone_model
 
+        # Global average pooling to get a single vector from CNN
         self.global_avg_pool = nn.AdaptiveAvgPool2d(1)
 
-        # Gating network: Modulates the influence of menopause based on hospital type
+        # Gating mechanism for one clinical feature (e.g., hospital)
         self.gate = nn.Sequential(
-            nn.Linear(2, 16),  # hospital type only
+            nn.Linear(1, 8),
             nn.ReLU(),
-            nn.Linear(16, 1),
+            nn.Linear(8, 1),
             nn.Sigmoid()
         )
 
-        # Clinical feature projection
+        # Clinical feature embedding
         self.clinical_proj = nn.Sequential(
             nn.Linear(clinical_feature_dim, 64),
             nn.ReLU(),
@@ -33,24 +33,19 @@ class EfficientNetClinical(nn.Module):
         )
 
     def forward(self, x, clinical_features):
-        # Backbone + pooling
         x = self.backbone.input_conv(x)
         features = self.backbone.encoder(x)
         pooled = self.global_avg_pool(features).view(features.size(0), -1)  # (B, 1280)
 
-        # Split clinical features
-        menopause = clinical_features[:, 0:1]  # shape (B, 1)
-        hospital = clinical_features[:, 1:2]   # shape (B, 1)
+        menopause = clinical_features[:, 0:1]  # shape [B, 1]
+        hospital = clinical_features[:, 1:2]  # shape [B, 1]
 
-        gate_input = torch.cat([menopause, hospital], dim=1)  # shape (B, 2)
-        gate_value = self.gate(gate_input)  # shape (B, 1)
-        gated_menopause = gate_value * menopause  # shape (B, 1)
+        gate_value = self.gate(hospital)
+        gated_menopause = gate_value * menopause
         gated_clinical = torch.cat([gated_menopause, hospital], dim=1)
 
-        # Project clinical features
         clinical_embedding = self.clinical_proj(gated_clinical)  # (B, 128)
 
-        # Combine with image features
         combined = torch.cat([pooled, clinical_embedding], dim=1)
         class_logits = self.classification_head(combined)
 
