@@ -127,7 +127,7 @@ class EfficientUNetWithClassification(nn.Module):
             nn.Linear(in_features=1280, out_features=256, bias=True),
             nn.ReLU(),
             nn.Dropout(p=0.4),
-            nn.Linear(256, 2, bias=True)
+            nn.Linear(256, num_classification_classes, bias=True)
         )
 
     def forward(self, x):

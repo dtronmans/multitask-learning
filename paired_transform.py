@@ -1,6 +1,5 @@
 import random
 import torchvision.transforms.functional as F
-import torchvision.transforms as T
 from PIL import ImageFilter, Image
 import torch
 import numpy as np

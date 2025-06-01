@@ -90,7 +90,7 @@ def return_model(task, backbone, denoised=False,
                     map_location=torch.device(device)))
             efficientnet_model.to(device)
             if clinical:
-                model = EfficientNetClinical(efficientnet_model, num_classes=2)
+                model = EfficientNetClinical(efficientnet_model, num_classification_classes=2)
                 model.classification_head = nn.Sequential(
                     nn.Linear(1280 + 128, 256),
                     nn.ReLU(),

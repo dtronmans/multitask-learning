@@ -73,7 +73,7 @@ class EfficientClassificationOnly(nn.Module):
         )
 
     def forward(self, x):
-        x = self.input_conv(x)  # Adapt channels if needed
+        x = self.input_conv(x)
         x = self.encoder(x)
         x = self.global_avg_pool(x)
         x = x.view(x.size(0), -1)
