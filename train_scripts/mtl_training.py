@@ -23,8 +23,6 @@ def train(train_dataloader, test_dataloader, model, task, save_path, clinical):
     labels = []
     for batch in train_dataloader:
         labels.append(batch['label'])
-    all_labels = torch.cat(labels)
-    pos_weight = (all_labels == 0).sum() / (all_labels == 1).sum()
     class_weights = torch.tensor([1.0, 2.0]).to(device)
     classification_criterion = nn.CrossEntropyLoss(weight=class_weights)
     segmentation_criterion = DiceLossWithSigmoid()
@@ -192,11 +190,6 @@ if __name__ == "__main__":
     task = Task(args.task)
     num_epochs, batch_size, learning_rate = 80, 8, 0.001
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    transform = transforms.Compose([
-        transforms.Resize((336, 544)),
-        transforms.ToTensor(),
-    ])
 
     dataset_path = os.path.join("/exports", "lkeb-hpc", "dzrogmans")
     if denoised:

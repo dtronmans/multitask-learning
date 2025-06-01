@@ -43,10 +43,10 @@ def return_model(task, backbone, denoised=False,
                 model = EfficientUNetWithClassification(1, 1, 8)
                 model.load_state_dict(torch.load(base_path, weights_only=True, map_location=device))
                 model.classification_head = nn.Sequential(
-                    nn.Linear(1280, 128),
+                    nn.Linear(1280, 256),
                     nn.ReLU(),
-                    nn.Dropout(0.5),
-                    nn.Linear(128, 2)
+                    nn.Dropout(0.4),
+                    nn.Linear(256, 2)
                 )
                 model.to(device)
                 return model
@@ -69,10 +69,10 @@ def return_model(task, backbone, denoised=False,
                 model = UNetWithClassification(1, 1, 8)
                 model.load_state_dict(torch.load(base_path, weights_only=True, map_location=device))
                 model.classification_head = nn.Sequential(
-                    nn.Linear(1024, 128),
+                    nn.Linear(1024, 256),
                     nn.ReLU(),
-                    nn.Dropout(0.5),
-                    nn.Linear(128, 2)
+                    nn.Dropout(0.4),
+                    nn.Linear(256, 2)
                 )
                 model.to(device)
                 return model
@@ -92,19 +92,19 @@ def return_model(task, backbone, denoised=False,
             if clinical:
                 model = EfficientNetClinical(efficientnet_model, num_classes=2)
                 model.classification_head = nn.Sequential(
-                    nn.Linear(1280 + 128, 128),
+                    nn.Linear(1280 + 128, 256),
                     nn.ReLU(),
-                    nn.Dropout(0.5),
-                    nn.Linear(128, 2)
+                    nn.Dropout(0.4),
+                    nn.Linear(256, 2)
                 )
                 model.to(device)
                 return model
             else:
                 efficientnet_model.classification_head = nn.Sequential(
-                    nn.Linear(1280, 128),
+                    nn.Linear(1280, 256),
                     nn.ReLU(),
-                    nn.Dropout(0.5),
-                    nn.Linear(128, 2)
+                    nn.Dropout(0.4),
+                    nn.Linear(256, 2)
                 )
                 efficientnet_model.to(device)
                 return efficientnet_model

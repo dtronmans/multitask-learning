@@ -4,14 +4,12 @@ from torchvision.models import efficientnet_b0, EfficientNet_B0_Weights
 
 
 class EfficientNetClinical(nn.Module):
-    def __init__(self, backbone_model, clinical_feature_dim=2, num_classes=2):
+    def __init__(self, backbone_model, clinical_feature_dim=2, num_classification_classes=2):
         super(EfficientNetClinical, self).__init__()
         self.backbone = backbone_model
 
-        # Global average pooling to get a single vector from CNN
         self.global_avg_pool = nn.AdaptiveAvgPool2d(1)
 
-        # Gating mechanism for one clinical feature (e.g., hospital)
         self.gate = nn.Sequential(
             nn.Linear(1, 8),
             nn.ReLU(),
@@ -19,7 +17,6 @@ class EfficientNetClinical(nn.Module):
             nn.Sigmoid()
         )
 
-        # Clinical feature embedding
         self.clinical_proj = nn.Sequential(
             nn.Linear(clinical_feature_dim, 64),
             nn.ReLU(),
@@ -27,9 +24,11 @@ class EfficientNetClinical(nn.Module):
             nn.ReLU()
         )
 
-        # Final classification head
         self.classification_head = nn.Sequential(
-            nn.Linear(1280 + 128, num_classes)
+            nn.Linear(1280, 256),
+            nn.ReLU(),
+            nn.Dropout(p=0.4, inplace=True),
+            nn.Linear(256, num_classification_classes)
         )
 
     def forward(self, x, clinical_features):
@@ -61,17 +60,16 @@ class EfficientClassificationOnly(nn.Module):
         effnet = efficientnet_b0(weights=EfficientNet_B0_Weights.IMAGENET1K_V1)
         features = list(effnet.features.children())
 
-        # Replace input channels if necessary
-        self.input_conv = nn.Conv2d(n_channels, 3, kernel_size=1) if n_channels != 3 else nn.Identity()
+        self.input_conv = nn.Conv2d(n_channels, 32, kernel_size=3, stride=2, padding=1) if n_channels != 3 else nn.Identity()
 
-        # Sequential downsampling path from EfficientNetB0
         self.encoder = nn.Sequential(*features)
 
-        # Classification head from EfficientNetB0
         self.global_avg_pool = effnet.avgpool
         self.classification_head = nn.Sequential(
-            nn.Dropout(p=0.2, inplace=True),
-            nn.Linear(1280, num_classification_classes, bias=True)
+            nn.Linear(1280, 256),
+            nn.ReLU(),
+            nn.Dropout(p=0.4, inplace=True),
+            nn.Linear(256, num_classification_classes)
         )
 
     def forward(self, x):

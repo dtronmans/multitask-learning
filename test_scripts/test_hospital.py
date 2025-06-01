@@ -151,7 +151,7 @@ if __name__ == "__main__":
     denoised = False
     clinical = True
     backbone = Backbone.EFFICIENTNET
-    task = Task.JOINT
+    task = Task.CLASSIFICATION
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     mask_only = False
     if task == task.CLASSIFICATION or task == task.JOINT:
@@ -174,7 +174,7 @@ if __name__ == "__main__":
 
     print("dataset path: " + dataset_path)
     model = return_model(task, backbone, denoised, clinical)
-    model.load_state_dict(torch.load("models/hospital/joint/efficientnet_joint_clinical.pt", weights_only=True,
+    model.load_state_dict(torch.load("models/hospital/classification/efficientnet_classification_clinical.pt", weights_only=True,
                                      map_location=device))
 
     model.eval()
