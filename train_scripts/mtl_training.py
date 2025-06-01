@@ -2,6 +2,7 @@ import argparse
 import os
 
 import torch
+from sklearn.metrics import recall_score
 from torch import nn, optim
 from torch.utils.data import DataLoader
 from torchvision import transforms
@@ -19,13 +20,20 @@ from train_scripts.losses import DiceLossWithSigmoid
 
 def train(train_dataloader, test_dataloader, model, task, save_path, clinical):
     print("Task: " + str(task))
-    class_weights = torch.tensor([1.0, 2.0]).to(device)
+    labels = []
+    for batch in train_dataloader:
+        labels.append(batch['label'])
+    all_labels = torch.cat(labels)
+    pos_weight = (all_labels == 0).sum() / (all_labels == 1).sum()
+    class_weights = torch.tensor([1.0, pos_weight.item()]).to(device)
     classification_criterion = nn.CrossEntropyLoss(weight=class_weights)
     segmentation_criterion = DiceLossWithSigmoid()
     optimizer = optim.Adam(model.parameters(), lr=1e-4, weight_decay=1e-5)
 
     best_val_loss = np.inf
     for epoch in range(num_epochs):
+        all_labels = []
+        all_preds = []
         print(f"\nEpoch {epoch + 1}/{num_epochs}")
         print("-" * 20)
 
@@ -58,9 +66,9 @@ def train(train_dataloader, test_dataloader, model, task, save_path, clinical):
                     valid_predicted_seg = predicted_seg[valid_mask_indices]
                     valid_masks = masks[valid_mask_indices]
                     seg_loss = segmentation_criterion(valid_predicted_seg, valid_masks)
-                    loss = seg_loss + 0.3 * cls_loss
+                    loss = seg_loss + cls_loss
                 else:
-                    loss = 0.3 * cls_loss
+                    loss = cls_loss
             else:
                 raise ValueError(f"Unsupported task type: {task}")
 
@@ -107,13 +115,18 @@ def train(train_dataloader, test_dataloader, model, task, save_path, clinical):
                         valid_predicted_seg = predicted_seg[valid_mask_indices]
                         valid_masks = masks[valid_mask_indices]
                         seg_loss = segmentation_criterion(valid_predicted_seg, valid_masks)
-                        loss = seg_loss + 0.3 * cls_loss
+                        loss = seg_loss + cls_loss
                     else:
-                        loss = 0.3 * cls_loss
+                        loss = cls_loss
 
                 val_loss += loss.item()
 
                 if task in [Task.CLASSIFICATION, Task.JOINT]:
+                    probs = torch.softmax(predicted_cls, dim=1)
+                    preds = torch.argmax(probs, dim=1)
+                    all_labels.append(labels.cpu())
+                    all_preds.append(preds.cpu())
+
                     preds = torch.argmax(predicted_cls, dim=1)
                     correct_val += (preds == labels).sum().item()
                     total_val += labels.size(0)
@@ -128,6 +141,10 @@ def train(train_dataloader, test_dataloader, model, task, save_path, clinical):
         print(f"Epoch {epoch + 1}/{num_epochs} - Train Loss: {avg_train_loss:.4f} - Val Loss: {avg_val_loss:.4f}")
 
         if task in [Task.CLASSIFICATION, Task.JOINT]:
+            all_labels = torch.cat(all_labels)
+            all_preds = torch.cat(all_preds)
+            recall = recall_score(all_labels, all_preds, average='binary', pos_label=1)
+            print(f"Validation Recall (Sensitivity): {recall:.4f}")
             print(f"Train Accuracy: {train_accuracy:.2f}% - Val Accuracy: {val_accuracy:.2f}%")
 
     print("Training complete.")
