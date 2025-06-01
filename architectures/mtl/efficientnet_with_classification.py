@@ -50,10 +50,8 @@ class EfficientUNetWithClinicalClassification(nn.Module):
         # Classification head
         self.global_avg_pool = nn.AdaptiveAvgPool2d((1, 1))
         self.classifier = nn.Sequential(
-            nn.Linear(512 + 128, 256),
-            nn.ReLU(),
-            nn.Dropout(0.3),
-            nn.Linear(256, num_classes)
+            nn.Dropout(0.5),
+            nn.Linear(512 + 128, num_classes)
         )
 
     def forward(self, x, clinical):
