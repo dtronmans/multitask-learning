@@ -9,61 +9,64 @@ class EfficientUNetWithClinicalClassification(nn.Module):
     def __init__(self, in_channels=1, n_segmentation_classes=1, num_classes=2, bilinear=False):
         super(EfficientUNetWithClinicalClassification, self).__init__()
 
-        # Load pretrained EfficientNet
-        base_model = efficientnet_b0(weights=EfficientNet_B0_Weights.IMAGENET1K_V1)
-        base_model.features[0][0] = nn.Conv2d(
-            in_channels, 32, kernel_size=3, stride=2, padding=1, bias=False
+        # Load pretrained ResNet18
+        base_model = resnet18(weights=ResNet18_Weights.IMAGENET1K_V1)
+        base_model.conv1 = nn.Conv2d(
+            in_channels, 64, kernel_size=7, stride=2, padding=3, bias=False
         )
         self.base_model = base_model
 
-        # Encoder blocks
-        features = list(base_model.features.children())
-        self.inc = features[0]
-        self.down1 = features[1]
-        self.down2 = features[2]
-        self.down3 = features[3]
-        self.down4 = features[4]
-        self.mid = features[5]
-        self.deep = features[6]
-        self.classification_conv = nn.Sequential(features[7], features[8])  # Output: 1280
+        # Encoder from ResNet
+        self.inc = nn.Sequential(base_model.conv1, base_model.bn1, base_model.relu)
+        self.maxpool = base_model.maxpool
+        self.down1 = base_model.layer1  # 64
+        self.down2 = base_model.layer2  # 128
+        self.down3 = base_model.layer3  # 256
+        self.down4 = base_model.layer4  # 512
 
-        # Decoder blocks (you need to define UpMid separately)
-        self.up1 = UpMid(192, 80, 80, bilinear)
-        self.up2 = UpMid(80, 40, 40, bilinear)
-        self.up3 = UpMid(40, 24, 24, bilinear)
-        self.up4 = UpMid(24, 32, 16, bilinear)
+        # Decoder blocks
+        self.up1 = UpMid(512, 256, 256, bilinear)
+        self.up2 = UpMid(256, 128, 128, bilinear)
+        self.up3 = UpMid(128, 64, 64, bilinear)
+        self.up4 = UpMid(64, 64, 32, bilinear)
 
         self.final_up = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
-        self.outc = nn.Conv2d(16, n_segmentation_classes, kernel_size=1)
+        self.outc = nn.Conv2d(32, n_segmentation_classes, kernel_size=1)
 
-        # Simpler clinical fusion
+        # Gated clinical fusion (restored)
+        self.gate = nn.Sequential(
+            nn.Linear(1, 8),
+            nn.ReLU(),
+            nn.Linear(8, 1),
+            nn.Sigmoid()
+        )
         self.clinical_proj = nn.Sequential(
             nn.Linear(2, 64),
+            nn.ReLU(),
+            nn.Linear(64, 128),
             nn.ReLU()
         )
 
-        # Pruned classification head
-        self.global_avg_pool = base_model.avgpool
+        # Classification head
+        self.global_avg_pool = nn.AdaptiveAvgPool2d((1, 1))
         self.classifier = nn.Sequential(
-            nn.Linear(1280 + 64, 128),
+            nn.Linear(512 + 128, 128),
             nn.ReLU(),
-            nn.Dropout(0.3),
+            nn.Dropout(0.4),
             nn.Linear(128, num_classes)
         )
 
     def forward(self, x, clinical):
         # Encoder
         x0 = self.inc(x)
-        x1 = self.down1(x0)
-        x2 = self.down2(x1)
-        x3 = self.down3(x2)
-        x4 = self.down4(x3)
-        x5 = self.mid(x4)
-        x6 = self.deep(x5)
-        x7 = self.classification_conv(x6)  # Output: [B, 1280, 1, 1]
+        x1 = self.maxpool(x0)
+        x2 = self.down1(x1)
+        x3 = self.down2(x2)
+        x4 = self.down3(x3)
+        x5 = self.down4(x4)
 
         # Decoder
-        x_seg = self.up1(x6, x4)
+        x_seg = self.up1(x5, x4)
         x_seg = self.up2(x_seg, x3)
         x_seg = self.up3(x_seg, x2)
         x_seg = self.up4(x_seg, x0)
@@ -71,16 +74,19 @@ class EfficientUNetWithClinicalClassification(nn.Module):
         seg_logits = self.outc(x_seg)
 
         # Classification
-        pooled = self.global_avg_pool(x7).view(x7.size(0), -1)  # Shape: [B, 1280]
+        pooled = self.global_avg_pool(x5).view(x5.size(0), -1)  # [B, 512]
 
-        # Use clinical info directly (simplified)
-        clinical_embedding = self.clinical_proj(clinical)  # Shape: [B, 64]
+        menopause = clinical[:, 0:1]  # [B, 1]
+        hospital = clinical[:, 1:2]   # [B, 1]
+        gate_value = self.gate(hospital)  # [B, 1]
+        gated_menopause = gate_value * menopause
+        gated_clinical = torch.cat([gated_menopause, hospital], dim=1)  # [B, 2]
 
-        x_cls = torch.cat((pooled, clinical_embedding), dim=1)
+        clinical_embedding = self.clinical_proj(gated_clinical)  # [B, 128]
+        x_cls = torch.cat((pooled, clinical_embedding), dim=1)  # [B, 640]
         cls_logits = self.classifier(x_cls)
 
         return seg_logits, cls_logits
-
 
 class EfficientUNetWithClassification(nn.Module):
     def __init__(self, n_channels, n_segmentation_classes, num_classification_classes, bilinear=False):
