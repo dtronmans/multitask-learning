@@ -16,19 +16,18 @@ class EfficientUNetWithClinicalClassification(nn.Module):
         )
         self.base_model = base_model
 
-        # Encoder feature blocks from EfficientNet
+        # Encoder blocks
         features = list(base_model.features.children())
-        self.inc = features[0]  # Output: 32
-        self.down1 = features[1]  # Output: 16
-        self.down2 = features[2]  # Output: 24
-        self.down3 = features[3]  # Output: 40
-        self.down4 = features[4]  # Output: 80
-        self.mid = features[5]    # Output: 112
-        self.deep = features[6]   # Output: 192
-
+        self.inc = features[0]
+        self.down1 = features[1]
+        self.down2 = features[2]
+        self.down3 = features[3]
+        self.down4 = features[4]
+        self.mid = features[5]
+        self.deep = features[6]
         self.classification_conv = nn.Sequential(features[7], features[8])  # Output: 1280
 
-        # Decoder using your UpMid blocks
+        # Decoder blocks (you need to define UpMid separately)
         self.up1 = UpMid(192, 80, 80, bilinear)
         self.up2 = UpMid(80, 40, 40, bilinear)
         self.up3 = UpMid(40, 24, 24, bilinear)
@@ -37,29 +36,23 @@ class EfficientUNetWithClinicalClassification(nn.Module):
         self.final_up = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
         self.outc = nn.Conv2d(16, n_segmentation_classes, kernel_size=1)
 
-        # Clinical classification components
-        self.global_avg_pool = base_model.avgpool
-        self.gate = nn.Sequential(
-            nn.Linear(1, 8),
-            nn.ReLU(),
-            nn.Linear(8, 1),
-            nn.Sigmoid()
-        )
+        # Simpler clinical fusion
         self.clinical_proj = nn.Sequential(
             nn.Linear(2, 64),
-            nn.ReLU(),
-            nn.Linear(64, 128),
             nn.ReLU()
         )
+
+        # Pruned classification head
+        self.global_avg_pool = base_model.avgpool
         self.classifier = nn.Sequential(
-            nn.Linear(1280 + 128, 256),
+            nn.Linear(1280 + 64, 128),
             nn.ReLU(),
-            nn.Dropout(0.4),
-            nn.Linear(256, num_classes)
+            nn.Dropout(0.3),
+            nn.Linear(128, num_classes)
         )
 
     def forward(self, x, clinical):
-        # Encoder path
+        # Encoder
         x0 = self.inc(x)
         x1 = self.down1(x0)
         x2 = self.down2(x1)
@@ -67,9 +60,9 @@ class EfficientUNetWithClinicalClassification(nn.Module):
         x4 = self.down4(x3)
         x5 = self.mid(x4)
         x6 = self.deep(x5)
-        x7 = self.classification_conv(x6)  # 1280 features
+        x7 = self.classification_conv(x6)  # Output: [B, 1280, 1, 1]
 
-        # Segmentation decoder
+        # Decoder
         x_seg = self.up1(x6, x4)
         x_seg = self.up2(x_seg, x3)
         x_seg = self.up3(x_seg, x2)
@@ -77,16 +70,12 @@ class EfficientUNetWithClinicalClassification(nn.Module):
         x_seg = self.final_up(x_seg)
         seg_logits = self.outc(x_seg)
 
-        # Classification path
+        # Classification
         pooled = self.global_avg_pool(x7).view(x7.size(0), -1)  # Shape: [B, 1280]
 
-        menopause = clinical[:, 0:1]
-        hospital = clinical[:, 1:2]
-        gate_value = self.gate(hospital)
-        gated_menopause = gate_value * menopause
-        gated_clinical = torch.cat([gated_menopause, hospital], dim=1)
+        # Use clinical info directly (simplified)
+        clinical_embedding = self.clinical_proj(clinical)  # Shape: [B, 64]
 
-        clinical_embedding = self.clinical_proj(gated_clinical)
         x_cls = torch.cat((pooled, clinical_embedding), dim=1)
         cls_logits = self.classifier(x_cls)
 
