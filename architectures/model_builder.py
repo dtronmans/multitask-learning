@@ -30,13 +30,13 @@ def return_model(task, backbone, denoised=False,
             else:
                 base_path = os.path.join(base_path, "joint", "efficientnet_joint.pt")
             if clinical:
-                # old_model = EfficientUNetWithClassification(1, 1, 8)
-                # old_model.load_state_dict(
-                #     torch.load(base_path, weights_only=True,
-                #                map_location=torch.device(device)))
-                # old_model.to(device)
+                old_model = EfficientUNetWithClassification(1, 1, 8)
+                old_model.load_state_dict(
+                    torch.load(base_path, weights_only=True,
+                               map_location=torch.device(device)))
+                old_model.to(device)
                 new_model = EfficientUNetWithClinicalClassification(1, 1, 2)
-                # new_model = transfer_weights_to_clinical_model(old_model, new_model)
+                new_model = transfer_weights_to_clinical_model(old_model, new_model)
                 new_model.to(device)
                 return new_model
             else:
