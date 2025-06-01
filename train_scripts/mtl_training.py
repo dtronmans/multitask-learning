@@ -28,7 +28,7 @@ def train(train_dataloader, test_dataloader, model, task, save_path, clinical):
     class_weights = torch.tensor([1.0, 2.0]).to(device)
     classification_criterion = nn.CrossEntropyLoss(weight=class_weights)
     segmentation_criterion = DiceLossWithSigmoid()
-    optimizer = optim.Adam(model.parameters(), lr=1e-4, weight_decay=1e-5)
+    optimizer = optim.Adam(model.parameters(), lr=0.001)
 
     best_val_loss = np.inf
     for epoch in range(num_epochs):
@@ -66,9 +66,9 @@ def train(train_dataloader, test_dataloader, model, task, save_path, clinical):
                     valid_predicted_seg = predicted_seg[valid_mask_indices]
                     valid_masks = masks[valid_mask_indices]
                     seg_loss = segmentation_criterion(valid_predicted_seg, valid_masks)
-                    loss = seg_loss + cls_loss
+                    loss = seg_loss + 0.3 * cls_loss
                 else:
-                    loss = cls_loss
+                    loss = 0.3 * cls_loss
             else:
                 raise ValueError(f"Unsupported task type: {task}")
 
@@ -115,9 +115,9 @@ def train(train_dataloader, test_dataloader, model, task, save_path, clinical):
                         valid_predicted_seg = predicted_seg[valid_mask_indices]
                         valid_masks = masks[valid_mask_indices]
                         seg_loss = segmentation_criterion(valid_predicted_seg, valid_masks)
-                        loss = seg_loss + cls_loss
+                        loss = seg_loss + 0.3 * cls_loss
                     else:
-                        loss = cls_loss
+                        loss = 0.3 * cls_loss
 
                 val_loss += loss.item()
 
