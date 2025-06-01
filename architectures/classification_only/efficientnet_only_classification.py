@@ -13,7 +13,7 @@ class EfficientNetClinical(nn.Module):
 
         # Gating network: Modulates the influence of menopause based on hospital type
         self.gate = nn.Sequential(
-            nn.Linear(1, 16),  # hospital type only
+            nn.Linear(2, 16),  # hospital type only
             nn.ReLU(),
             nn.Linear(16, 1),
             nn.Sigmoid()
@@ -42,12 +42,10 @@ class EfficientNetClinical(nn.Module):
         menopause = clinical_features[:, 0:1]  # shape (B, 1)
         hospital = clinical_features[:, 1:2]   # shape (B, 1)
 
-        # Learn how much to gate the menopause info based on hospital type
-        gate_value = self.gate(hospital)       # shape (B, 1), values in (0,1)
-        modulated_menopause = gate_value * menopause
-
-        # Combine modulated menopause and hospital type
-        gated_clinical = torch.cat([modulated_menopause, hospital], dim=1)
+        gate_input = torch.cat([menopause, hospital], dim=1)  # shape (B, 2)
+        gate_value = self.gate(gate_input)  # shape (B, 1)
+        gated_menopause = gate_value * menopause  # shape (B, 1)
+        gated_clinical = torch.cat([gated_menopause, hospital], dim=1)
 
         # Project clinical features
         clinical_embedding = self.clinical_proj(gated_clinical)  # (B, 128)
