@@ -58,22 +58,21 @@ class EfficientClassificationOnly(nn.Module):
         self.num_classes = num_classification_classes
 
         effnet = efficientnet_b0(weights=EfficientNet_B0_Weights.IMAGENET1K_V1)
-        features = list(effnet.features.children())
 
-        self.input_conv = nn.Conv2d(n_channels, 32, kernel_size=3, stride=2, padding=1) if n_channels != 3 else nn.Identity()
+        if n_channels != 3:
+            effnet.features[0][0] = nn.Conv2d(n_channels, 32, kernel_size=3, stride=2, padding=1, bias=False)
 
-        self.encoder = nn.Sequential(*features)
+        self.encoder = effnet.features
 
         self.global_avg_pool = effnet.avgpool
         self.classification_head = nn.Sequential(
             nn.Linear(1280, 256),
             nn.ReLU(),
-            nn.Dropout(p=0.4, inplace=True),
+            nn.Dropout(p=0.4),
             nn.Linear(256, num_classification_classes)
         )
 
     def forward(self, x):
-        x = self.input_conv(x)
         x = self.encoder(x)
         x = self.global_avg_pool(x)
         x = x.view(x.size(0), -1)
