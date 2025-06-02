@@ -1,8 +1,8 @@
 import torch
 from torch import nn
-from torchvision.models import efficientnet_b0, EfficientNet_B0_Weights, resnet18, ResNet18_Weights
+from torchvision.models import efficientnet_b0, EfficientNet_B0_Weights
 
-from architectures.unet_parts import EfficientDown, UpMid, OutConv
+from architectures.unet_parts import UpMid, OutConv
 
 
 class EfficientUNetWithClinicalClassification(nn.Module):
@@ -104,10 +104,10 @@ class EfficientUNetWithClassification(nn.Module):
 
         features = list(base_model.features.children())
         self.inc = features[0]
-        self.down1 = EfficientDown([features[1]])
-        self.down2 = EfficientDown([features[2]])
-        self.down3 = EfficientDown([features[3]])
-        self.down4 = EfficientDown([features[4]])
+        self.down1 = features[1]
+        self.down2 = features[2]
+        self.down3 = features[3]
+        self.down4 = features[4]
 
         self.mid = features[5]
         self.segmentation_deep = features[6]
