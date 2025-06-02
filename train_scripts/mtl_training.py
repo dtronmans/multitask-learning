@@ -195,10 +195,10 @@ if __name__ == "__main__":
     dataset_path = os.path.join("/exports", "lkeb-hpc", "dzrogmans")
     if denoised:
         dataset_path = os.path.join(dataset_path, "mtl_denoised")
+    elif cropped:
+        dataset_path = os.path.join(dataset_path, "mtl_cropped")
     else:
         dataset_path = os.path.join(dataset_path, "mtl_final")
-    if cropped:
-        dataset_path = os.path.join(dataset_path, "mtl_cropped")
 
     mask_only = True
     if task == task.CLASSIFICATION or task == task.JOINT:
