@@ -97,6 +97,7 @@ def return_model(task, backbone, denoised=False,
                     nn.Dropout(0.4),
                     nn.Linear(256, 2)
                 )
+                model = transfer_weights_to_clinical_model(efficientnet_model, model)
                 model.to(device)
                 return model
             else:
