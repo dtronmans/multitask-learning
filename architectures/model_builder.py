@@ -127,10 +127,10 @@ def return_model(task, backbone, denoised=False,
                 base_path = os.path.join(base_path, "segmentation", "efficientnet_segmentation_denoised.pt")
             else:
                 base_path = os.path.join(base_path, "segmentation", "efficientnet_segmentation.pt")
-            model.load_state_dict(
-                torch.load(base_path,
-                           weights_only=True,
-                           map_location=device))
+            # model.load_state_dict(
+            #     torch.load(base_path,
+            #                weights_only=True,
+            #                map_location=device))
             model.to(device)
             return model
         elif backbone == Backbone.CLASSIC:
