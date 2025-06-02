@@ -185,6 +185,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     denoised = False
+    cropped = False
     clinical = args.clinical
     backbone = Backbone(args.backbone)
     task = Task(args.task)
@@ -196,6 +197,8 @@ if __name__ == "__main__":
         dataset_path = os.path.join(dataset_path, "mtl_denoised")
     else:
         dataset_path = os.path.join(dataset_path, "mtl_final")
+    if cropped:
+        dataset_path = os.path.join(dataset_path, "mtl_cropped")
 
     mask_only = True
     if task == task.CLASSIFICATION or task == task.JOINT:
@@ -206,9 +209,11 @@ if __name__ == "__main__":
     save_path = construct_save_path(denoised, backbone, task, clinical)
     print("Save path: " + save_path)
     pair_transform = PairedTransform(size=(336, 544))
+    if cropped:
+        pair_transform = PairedTransform(size=(164, 164))
 
     train_dataset = MedicalImageDataset(dataset_path, split="train", mask_only=mask_only, transform=pair_transform)
-    val_dataset = MedicalImageDataset(dataset_path, split="val", mask_only=mask_only)
+    val_dataset = MedicalImageDataset(dataset_path, split="val", mask_only=mask_only, cropped=cropped)
 
     print("Train dataset length: " + str(len(train_dataset)))
     print("Val dataset length: " + str(len(val_dataset)))

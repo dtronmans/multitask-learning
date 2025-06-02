@@ -150,6 +150,7 @@ def visualize_joint_prediction(images, pred_masks, preds, labels, clinical_info,
 if __name__ == "__main__":
     denoised = False
     clinical = True
+    cropped = False
     backbone = Backbone.EFFICIENTNET
     task = Task.JOINT
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -161,15 +162,13 @@ if __name__ == "__main__":
     print("clinical: " + str(clinical))
     print("task: " + str(task))
 
-    transform = transforms.Compose([
-        transforms.Resize((336, 544)),
-        transforms.ToTensor()
-    ])
-
     dataset_path = os.path.join("..", "final_datasets", "once_more")
     if denoised:
         dataset_path = os.path.join(dataset_path, "mtl_denoised")
     else:
+        dataset_path = os.path.join(dataset_path, "mtl_final")
+
+    if cropped:
         dataset_path = os.path.join(dataset_path, "mtl_cropped")
 
     print("dataset path: " + dataset_path)

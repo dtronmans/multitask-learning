@@ -53,13 +53,14 @@ class MultimodalMMOTUDataset(Dataset):
 
 
 class MedicalImageDataset(Dataset):
-    def __init__(self, root_dir, split='train', transform=None, mask_only=False):
+    def __init__(self, root_dir, split='train', transform=None, mask_only=False, cropped=False):
         self.root_dir = root_dir
         self.images_dir = os.path.join(root_dir, 'images')
         self.masks_dir = os.path.join(root_dir, 'masks')
         self.patient_list = pd.read_csv(os.path.join(root_dir, 'patient_info.csv'))
         self.transform = transform
         self.mask_only = mask_only
+        self.cropped = cropped
 
         self.samples = []
 
@@ -128,10 +129,16 @@ class MedicalImageDataset(Dataset):
             image, mask = self.transform(image, mask)
         else:
             # Default deterministic transform
-            image = transforms.Resize((336, 544))(image)
-            image = transforms.ToTensor()(image)
-            mask = transforms.Resize((336, 544))(mask)
-            mask = transforms.ToTensor()(mask)
+            if self.cropped:
+                image = transforms.Resize((164, 164))(image)
+                image = transforms.ToTensor()(image)
+                mask = transforms.Resize((164, 164))(mask)
+                mask = transforms.ToTensor()(mask)
+            else:
+                image = transforms.Resize((336, 544))(image)
+                image = transforms.ToTensor()(image)
+                mask = transforms.Resize((336, 544))(mask)
+                mask = transforms.ToTensor()(mask)
 
         return {
             'image': image,
