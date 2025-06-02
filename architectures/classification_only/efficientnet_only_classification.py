@@ -32,7 +32,6 @@ class EfficientNetClinical(nn.Module):
         )
 
     def forward(self, x, clinical_features):
-        x = self.backbone.input_conv(x)
         features = self.backbone.encoder(x)
         pooled = self.global_avg_pool(features).view(features.size(0), -1)  # (B, 1280)
 
