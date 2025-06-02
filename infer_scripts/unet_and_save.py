@@ -35,21 +35,30 @@ def save_cropped_segmented_images(model, dataloader, destination_folder):
 
             # Find contours
             contours, _ = cv2.findContours(mask_np, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-            if not contours:
-                continue  # Skip if no contours found
 
-            largest_contour = max(contours, key=cv2.contourArea)
-            x, y, w, h = cv2.boundingRect(largest_contour)
+            if contours:
+                largest_contour = max(contours, key=cv2.contourArea)
+                x, y, w, h = cv2.boundingRect(largest_contour)
 
-            # Add 20% padding
-            pad_x = int(0.01 * w)
-            pad_y = int(0.01 * h)
-            x1 = max(x - pad_x, 0)
-            y1 = max(y - pad_y, 0)
-            x2 = min(x + w + pad_x, image_np.shape[1])
-            y2 = min(y + h + pad_y, image_np.shape[0])
+                # Add 1% padding
+                pad_x = int(0.01 * w)
+                pad_y = int(0.01 * h)
+                x1 = max(x - pad_x, 0)
+                y1 = max(y - pad_y, 0)
+                x2 = min(x + w + pad_x, image_np.shape[1])
+                y2 = min(y + h + pad_y, image_np.shape[0])
 
-            cropped = image_np[y1:y2, x1:x2]
+                cropped = image_np[y1:y2, x1:x2]
+            else:
+                # Take center 256x256 crop
+                h, w = image_np.shape
+                center_y, center_x = h // 2, w // 2
+                half_size = 128
+                y1 = max(center_y - half_size, 0)
+                y2 = min(center_y + half_size, h)
+                x1 = max(center_x - half_size, 0)
+                x2 = min(center_x + half_size, w)
+                cropped = image_np[y1:y2, x1:x2]
 
             # Make it square by padding with black pixels
             height, width = cropped.shape
@@ -57,7 +66,7 @@ def save_cropped_segmented_images(model, dataloader, destination_folder):
             square = np.zeros((size, size), dtype=np.uint8)
             y_offset = (size - height) // 2
             x_offset = (size - width) // 2
-            square[y_offset:y_offset+height, x_offset:x_offset+width] = cropped
+            square[y_offset:y_offset + height, x_offset:x_offset + width] = cropped
 
             # Determine save path
             label_value = int(label.item())
@@ -70,9 +79,9 @@ def save_cropped_segmented_images(model, dataloader, destination_folder):
 
 
 if __name__ == "__main__":
-    file_path = "../final_datasets/once_more/mtl_final"
+    file_path = "/exports/lkeb-hpc/dzrogmans/mtl_final"
     model_path = "models/hospital/segmentation/efficientnet_segmentation.pt"
-    destination_folder = "../final_datasets/once_more/mtl_cropped"
+    destination_folder = "/exports/lkeb-hpc/dzrogmans/mtl_cropped"
 
     transform = transforms.Compose([
         transforms.Resize((336, 544)),
@@ -80,7 +89,7 @@ if __name__ == "__main__":
     ])
 
     for dataset_type in ["train", "val", "test"]:
-        dataset = MedicalImageDataset(file_path, split=dataset_type, transform=None, mask_only=False)
+        dataset = MedicalImageDataset(file_path, split=dataset_type, transform=None, mask_only=False, cropped=False)
         dataloader = DataLoader(dataset, batch_size=1, shuffle=True)
 
         model = EfficientUNet(1, 1)
