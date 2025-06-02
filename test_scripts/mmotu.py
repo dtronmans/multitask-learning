@@ -70,11 +70,11 @@ if __name__ == "__main__":
     dataset = MultimodalMMOTUDataset(directory, phase="test", paired_transform=DefaultPairedTransform())
     dataloader = DataLoader(dataset, batch_size=1, shuffle=False)
 
-    model = UNetWithClassification(1, 1,  8)
+    model = EfficientClassificationOnly(1,  8)
     model.load_state_dict(
-        torch.load("models/mmotu/joint/unet_joint.pt", map_location=torch.device("cpu")))
+        torch.load("models/mmotu/classification/efficientnet_classification.pt", map_location=torch.device("cpu")))
     model.to(torch.device("cpu"))
 
     model.eval()
 
-    test_segmentation_only(model, dataloader)
+    test_classification_only(model, dataloader)

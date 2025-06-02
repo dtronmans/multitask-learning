@@ -26,7 +26,7 @@ def return_model(task, backbone, denoised=False,
     if task == Task.JOINT:
         if backbone == Backbone.EFFICIENTNET:
             if denoised:
-                base_path = os.path.join(base_path, "joint", "efficientnet_joint_denoised.pt")
+                base_path = os.path.join(base_path, "joint", "efficientnet_joint.pt")
             else:
                 base_path = os.path.join(base_path, "joint", "efficientnet_joint.pt")
             if clinical:

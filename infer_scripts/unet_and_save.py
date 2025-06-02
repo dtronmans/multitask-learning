@@ -72,7 +72,7 @@ def save_cropped_segmented_images(model, dataloader, destination_folder):
 if __name__ == "__main__":
     file_path = "../final_datasets/once_more/mtl_final"
     model_path = "models/hospital/segmentation/efficientnet_segmentation.pt"
-    destination_folder = "mtl_cropped"
+    destination_folder = "../final_datasets/once_more/mtl_cropped"
 
     transform = transforms.Compose([
         transforms.Resize((336, 544)),

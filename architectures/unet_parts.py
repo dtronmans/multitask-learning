@@ -59,16 +59,6 @@ class UpMid(nn.Module):
         x = torch.cat([x2, x1], dim=1)
         return self.conv(x)
 
-
-class EfficientDown(nn.Module):
-    def __init__(self, blocks):
-        super().__init__()
-        self.blocks = nn.Sequential(*blocks)
-
-    def forward(self, x):
-        return self.blocks(x)
-
-
 class DoubleConv(nn.Module):
 
     def __init__(self, in_channels, out_channels, mid_channels=None):

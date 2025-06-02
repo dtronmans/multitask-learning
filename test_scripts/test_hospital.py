@@ -15,7 +15,7 @@ from enums import Backbone, Task
 from train_scripts.mtl_training import return_model
 
 
-def test_model(model, dataloader, task, device, clinical, threshold=0.5, show=False):
+def test_model(model, dataloader, task, device, clinical, threshold=0.3, show=False):
     model.to(device)
     model.eval()
     correct_cls = 0
@@ -151,7 +151,7 @@ if __name__ == "__main__":
     denoised = False
     clinical = True
     backbone = Backbone.EFFICIENTNET
-    task = Task.CLASSIFICATION
+    task = Task.JOINT
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     mask_only = False
     if task == task.CLASSIFICATION or task == task.JOINT:
@@ -170,11 +170,11 @@ if __name__ == "__main__":
     if denoised:
         dataset_path = os.path.join(dataset_path, "mtl_denoised")
     else:
-        dataset_path = os.path.join(dataset_path, "mtl_final")
+        dataset_path = os.path.join(dataset_path, "mtl_cropped")
 
     print("dataset path: " + dataset_path)
     model = return_model(task, backbone, denoised, clinical)
-    model.load_state_dict(torch.load("models/hospital/classification/efficientnet_classification_clinical.pt", weights_only=True,
+    model.load_state_dict(torch.load("models/hospital/joint/efficientnet_joint_clinical.pt", weights_only=True,
                                      map_location=device))
 
     model.eval()
