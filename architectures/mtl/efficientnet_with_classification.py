@@ -25,7 +25,7 @@ class EfficientUNetWithClinicalClassification(nn.Module):
 
         self.classification_conv = nn.Sequential(features[7], features[8])  # Output: 1280
 
-        self.up1 = UpMid(192, 80, 80, bilinear)
+        self.up1 = UpMid(1280, 80, 80, bilinear)
         self.up2 = UpMid(80, 40, 40, bilinear)
         self.up3 = UpMid(40, 24, 24, bilinear)
         self.up4 = UpMid(24, 32, 16, bilinear)
@@ -65,7 +65,7 @@ class EfficientUNetWithClinicalClassification(nn.Module):
         x6 = self.segmentation_deep(x5)
         x7 = self.classification_conv(x6)
 
-        x_seg = self.up1(x6, x4)
+        x_seg = self.up1(x7, x4)
         x_seg = self.up2(x_seg, x3)
         x_seg = self.up3(x_seg, x2)
         x_seg = self.up4(x_seg, x0)

@@ -25,7 +25,7 @@ class EfficientNetClinical(nn.Module):
         )
 
         self.classification_head = nn.Sequential(
-            nn.Linear(1280, 256),
+            nn.Linear(1280 + 128, 256),
             nn.ReLU(),
             nn.Dropout(p=0.4, inplace=True),
             nn.Linear(256, num_classification_classes)

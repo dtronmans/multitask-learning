@@ -91,12 +91,6 @@ def return_model(task, backbone, denoised=False,
             efficientnet_model.to(device)
             if clinical:
                 model = EfficientNetClinical(efficientnet_model, num_classification_classes=2)
-                model.classification_head = nn.Sequential(
-                    nn.Linear(1280 + 128, 256),
-                    nn.ReLU(),
-                    nn.Dropout(0.4),
-                    nn.Linear(256, 2)
-                )
                 model.to(device)
                 return model
             else:
