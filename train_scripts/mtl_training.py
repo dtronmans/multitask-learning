@@ -26,7 +26,7 @@ def train(train_dataloader, test_dataloader, model, task, save_path, clinical):
     class_weights = torch.tensor([1.0, 2.0]).to(device)
     classification_criterion = nn.CrossEntropyLoss(weight=class_weights)
     segmentation_criterion = DiceLossWithSigmoid()
-    optimizer = optim.Adam(model.parameters(), lr=0.001)
+    optimizer = optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-5)
 
     best_val_loss = np.inf
     for epoch in range(num_epochs):
