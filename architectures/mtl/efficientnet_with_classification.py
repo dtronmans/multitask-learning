@@ -43,15 +43,13 @@ class EfficientUNetWithClinicalClassification(nn.Module):
             nn.ReLU()
         )
         self.image_proj = nn.Sequential(
-            nn.Linear(1280, 256),
-            nn.BatchNorm1d(256),
-            nn.ReLU()
+            nn.Linear(1280, 64)
         )
         self.classifier = nn.Sequential(
-            nn.Linear(256 + 128, 256),
+            nn.Linear(64 + 128, 64),
             nn.ReLU(),
-            nn.Dropout(0.4),
-            nn.Linear(256, num_classes)
+            nn.Dropout(0.3),
+            nn.Linear(64, num_classes)
         )
 
     def forward(self, x, clinical):
