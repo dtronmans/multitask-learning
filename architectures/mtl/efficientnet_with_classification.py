@@ -36,20 +36,21 @@ class EfficientUNetWithClinicalClassification(nn.Module):
         self.global_avg_pool = base_model.avgpool
         self.clinical_proj = nn.Sequential(
             nn.Linear(2, 64),
-            nn.BatchNorm1d(64),
             nn.ReLU(),
             nn.Linear(64, 128),
-            nn.BatchNorm1d(128),
             nn.ReLU()
         )
         self.image_proj = nn.Sequential(
-            nn.Linear(1280, 64)
+            nn.Linear(1280, 64),
+            nn.ReLU()
         )
         self.classifier = nn.Sequential(
             nn.Linear(64 + 128, 64),
             nn.ReLU(),
-            nn.Dropout(0.3),
-            nn.Linear(64, num_classes)
+            nn.Dropout(0.25),
+            nn.Linear(64, 32),
+            nn.ReLU(),
+            nn.Linear(32, num_classes)
         )
 
     def forward(self, x, clinical):
