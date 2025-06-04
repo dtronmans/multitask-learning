@@ -64,9 +64,9 @@ def train(train_dataloader, test_dataloader, model, task, save_path, clinical):
                     valid_predicted_seg = predicted_seg[valid_mask_indices]
                     valid_masks = masks[valid_mask_indices]
                     seg_loss = segmentation_criterion(valid_predicted_seg, valid_masks)
-                    loss = seg_loss + 0.3 * cls_loss
+                    loss = 0.4 * seg_loss + cls_loss
                 else:
-                    loss = 0.3 * cls_loss
+                    loss = cls_loss
             else:
                 raise ValueError(f"Unsupported task type: {task}")
 
@@ -113,9 +113,9 @@ def train(train_dataloader, test_dataloader, model, task, save_path, clinical):
                         valid_predicted_seg = predicted_seg[valid_mask_indices]
                         valid_masks = masks[valid_mask_indices]
                         seg_loss = segmentation_criterion(valid_predicted_seg, valid_masks)
-                        loss = seg_loss + 0.3 * cls_loss
+                        loss = 0.4 * seg_loss + cls_loss
                     else:
-                        loss = 0.3 * cls_loss
+                        loss = cls_loss
 
                 val_loss += loss.item()
 

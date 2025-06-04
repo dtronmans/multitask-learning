@@ -102,8 +102,10 @@ class UNetWithClassification(nn.Module):
         # Classification head (aligned with EfficientNet)
         self.global_avg_pool = nn.AdaptiveAvgPool2d(1)
         self.classification_head = nn.Sequential(
-            nn.Dropout(p=0.2, inplace=True),
-            nn.Linear(1024 // factor, num_classification_classes)
+            nn.Linear(in_features=1024 // factor, out_features=256, bias=True),
+            nn.ReLU(),
+            nn.Dropout(p=0.2),
+            nn.Linear(256, num_classification_classes, bias=True)
         )
 
     def forward(self, x):

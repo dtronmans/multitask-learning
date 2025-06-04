@@ -111,7 +111,7 @@ class EfficientUNetWithClassification(nn.Module):
         self.classification_conv = nn.Sequential(features[7], features[8])
 
         # Decoder
-        self.up1 = UpMid(192, 80, 80, bilinear)
+        self.up1 = UpMid(1280, 80, 80, bilinear)
         self.up2 = UpMid(80, 40, 40, bilinear)
         self.up3 = UpMid(40, 24, 24, bilinear)
         self.up4 = UpMid(24, 32, 16, bilinear)
@@ -122,7 +122,7 @@ class EfficientUNetWithClassification(nn.Module):
         self.classification_head = nn.Sequential(
             nn.Linear(in_features=1280, out_features=256, bias=True),
             nn.ReLU(),
-            nn.Dropout(p=0.4),
+            nn.Dropout(p=0.2),
             nn.Linear(256, num_classification_classes, bias=True)
         )
 
@@ -134,9 +134,10 @@ class EfficientUNetWithClassification(nn.Module):
         x4 = self.down4(x3)
         x5 = self.mid(x4)
         x6 = self.segmentation_deep(x5)
+        x7 = self.classification_conv(x6)
 
         # Segmentation decoder
-        x_seg = self.up1(x6, x4)
+        x_seg = self.up1(x7, x4)
         x_seg = self.up2(x_seg, x3)
         x_seg = self.up3(x_seg, x2)
         x_seg = self.up4(x_seg, x0)
@@ -144,8 +145,7 @@ class EfficientUNetWithClassification(nn.Module):
         seg_logits = self.outc(x_seg)
 
         # Classification head
-        x_cls = self.classification_conv(x6)
-        pooled = self.global_avg_pool(x_cls).view(x_cls.size(0), -1)
+        pooled = self.global_avg_pool(x7).view(x7.size(0), -1)
         class_logits = self.classification_head(pooled)
 
         return seg_logits, class_logits
