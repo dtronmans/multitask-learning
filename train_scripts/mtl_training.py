@@ -64,7 +64,7 @@ def train(train_dataloader, test_dataloader, model, task, save_path, clinical):
                     valid_predicted_seg = predicted_seg[valid_mask_indices]
                     valid_masks = masks[valid_mask_indices]
                     seg_loss = segmentation_criterion(valid_predicted_seg, valid_masks)
-                    loss = 0.4 * seg_loss + cls_loss
+                    loss = 0.3 * seg_loss + cls_loss
                 else:
                     loss = cls_loss
             else:
@@ -113,7 +113,7 @@ def train(train_dataloader, test_dataloader, model, task, save_path, clinical):
                         valid_predicted_seg = predicted_seg[valid_mask_indices]
                         valid_masks = masks[valid_mask_indices]
                         seg_loss = segmentation_criterion(valid_predicted_seg, valid_masks)
-                        loss = 0.4 * seg_loss + cls_loss
+                        loss = 0.3 * seg_loss + cls_loss
                     else:
                         loss = cls_loss
 
