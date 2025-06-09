@@ -26,7 +26,7 @@ def return_model(task, backbone, denoised=False,
     if task == Task.JOINT:
         if backbone == Backbone.EFFICIENTNET:
             if denoised:
-                base_path = os.path.join(base_path, "joint", "efficientnet_joint.pt")
+                base_path = os.path.join(base_path, "joint", "efficientnet_joint_denoised.pt")
             else:
                 base_path = os.path.join(base_path, "joint", "efficientnet_joint.pt")
             if clinical:
@@ -45,8 +45,10 @@ def return_model(task, backbone, denoised=False,
                 model.classification_head = nn.Sequential(
                     nn.Linear(1280, 256),
                     nn.ReLU(),
-                    nn.Dropout(0.4),
-                    nn.Linear(256, 2)
+                    nn.Dropout(0.25),
+                    nn.Linear(256, 64),
+                    nn.ReLU(),
+                    nn.Linear(64, 2)
                 )
                 model.to(device)
                 return model
@@ -91,14 +93,24 @@ def return_model(task, backbone, denoised=False,
             efficientnet_model.to(device)
             if clinical:
                 model = EfficientNetClinical(efficientnet_model, num_classification_classes=2)
+                model.classification_head = nn.Sequential(
+                    nn.Linear(1280, 256),
+                    nn.ReLU(),
+                    nn.Dropout(0.25),
+                    nn.Linear(256, 64),
+                    nn.ReLU(),
+                    nn.Linear(64, 2)
+                )
                 model.to(device)
                 return model
             else:
                 efficientnet_model.classification_head = nn.Sequential(
                     nn.Linear(1280, 256),
                     nn.ReLU(),
-                    nn.Dropout(0.4),
-                    nn.Linear(256, 2)
+                    nn.Dropout(0.25),
+                    nn.Linear(256, 64),
+                    nn.ReLU(),
+                    nn.Linear(64, 2)
                 )
                 efficientnet_model.to(device)
                 return efficientnet_model

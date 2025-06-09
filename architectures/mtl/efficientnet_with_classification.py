@@ -40,17 +40,13 @@ class EfficientUNetWithClinicalClassification(nn.Module):
             nn.Linear(64, 128),
             nn.ReLU()
         )
-        self.image_proj = nn.Sequential(
-            nn.Linear(1280, 64),
-            nn.ReLU()
-        )
         self.classifier = nn.Sequential(
-            nn.Linear(64 + 128, 64),
+            nn.Linear(1280 + 128, 256),
             nn.ReLU(),
             nn.Dropout(0.25),
-            nn.Linear(64, 32),
+            nn.Linear(256, 64),
             nn.ReLU(),
-            nn.Linear(32, num_classes)
+            nn.Linear(64, num_classes)
         )
 
     def forward(self, x, clinical):
@@ -72,14 +68,13 @@ class EfficientUNetWithClinicalClassification(nn.Module):
         seg_logits = self.outc(x_seg)
 
         pooled = self.global_avg_pool(x7).view(x7.size(0), -1)  # [B, 1280]
-        image_embedding = self.image_proj(pooled)
 
         menopause = clinical[:, 0:1]
         hospital = clinical[:, 1:2]
         gated_clinical = torch.cat([menopause, hospital], dim=1)
 
         clinical_embedding = self.clinical_proj(gated_clinical)
-        x_cls = torch.cat((image_embedding, clinical_embedding), dim=1)
+        x_cls = torch.cat((pooled, clinical_embedding), dim=1)
         cls_logits = self.classifier(x_cls)
 
         return seg_logits, cls_logits

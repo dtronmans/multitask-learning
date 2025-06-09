@@ -27,13 +27,6 @@ class UNetWithClinicalClassification(nn.Module):
 
         self.global_avg_pool = nn.AdaptiveAvgPool2d(1)
 
-        self.clinical_gate = nn.Sequential(
-            nn.Linear(1, 16),
-            nn.ReLU(),
-            nn.Linear(16, 1),
-            nn.Sigmoid()
-        )
-
         self.clinical_embedding = nn.Sequential(
             nn.Linear(2, 64),
             nn.ReLU(),
@@ -41,11 +34,13 @@ class UNetWithClinicalClassification(nn.Module):
             nn.ReLU()
         )
 
-        self.classification_head = nn.Sequential(
-            nn.Linear(1024 + 128, 128),
+        self.classifier = nn.Sequential(
+            nn.Linear(1024 + 128, 256),
             nn.ReLU(),
-            nn.Dropout(0.4),
-            nn.Linear(128, 2)
+            nn.Dropout(0.25),
+            nn.Linear(256, 64),
+            nn.ReLU(),
+            nn.Linear(64, num_classification_classes)
         )
 
     def forward(self, x, clinical):
@@ -65,10 +60,6 @@ class UNetWithClinicalClassification(nn.Module):
 
         menopausal = clinical[:, 0:1]
         center_type = clinical[:, 1:2]
-        gate = 1 - self.clinical_gate(center_type)
-        modulated_menopausal = menopausal * gate
-        clinical_input = torch.cat([modulated_menopausal, center_type], dim=1)
-        clinical_emb = self.clinical_embedding(clinical_input)
 
         combined = torch.cat([pooled, clinical_emb], dim=1)
         class_logits = self.classification_head(combined)
