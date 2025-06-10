@@ -42,8 +42,7 @@ def train(train_dataloader, test_dataloader, model, task, save_path, clinical):
 
         for batch in tqdm(train_dataloader, desc="Training", leave=True):
             images, labels, masks, clinical_info = batch['image'].to(device), batch['label'].to(device), \
-                batch['mask'].to(device), batch['clinical'].to(
-                device)
+                batch['mask'].to(device), batch['clinical'].to(device)
             masks = (masks > 0).float()
 
             optimizer.zero_grad()
@@ -58,8 +57,7 @@ def train(train_dataloader, test_dataloader, model, task, save_path, clinical):
                 loss = segmentation_criterion(predicted_seg, masks)
             elif task == Task.JOINT:
                 cls_loss = classification_criterion(predicted_cls, labels)
-                valid_mask_indices = (masks.flatten(1).sum(dim=1) > 0)  # shape: (batch_size,)
-
+                valid_mask_indices = (masks.flatten(1).sum(dim=1) > 0)
                 if valid_mask_indices.any():
                     valid_predicted_seg = predicted_seg[valid_mask_indices]
                     valid_masks = masks[valid_mask_indices]
@@ -92,8 +90,7 @@ def train(train_dataloader, test_dataloader, model, task, save_path, clinical):
         with torch.no_grad():
             for batch in tqdm(test_dataloader, desc="Validation", leave=True):
                 images, labels, masks, clinical_info = batch['image'].to(device), batch['label'].to(device), \
-                    batch['mask'].to(device), batch['clinical'].to(
-                    device)
+                    batch['mask'].to(device), batch['clinical'].to(device)
                 masks = (masks > 0).float()
 
                 if clinical:
@@ -107,8 +104,7 @@ def train(train_dataloader, test_dataloader, model, task, save_path, clinical):
                     loss = segmentation_criterion(predicted_seg, masks)
                 elif task == Task.JOINT:
                     cls_loss = classification_criterion(predicted_cls, labels)
-                    valid_mask_indices = (masks.flatten(1).sum(dim=1) > 0)  # shape: (batch_size,)
-
+                    valid_mask_indices = (masks.flatten(1).sum(dim=1) > 0)
                     if valid_mask_indices.any():
                         valid_predicted_seg = predicted_seg[valid_mask_indices]
                         valid_masks = masks[valid_mask_indices]
@@ -136,6 +132,11 @@ def train(train_dataloader, test_dataloader, model, task, save_path, clinical):
             print("Saving best model so far!")
             best_val_loss = avg_val_loss
             torch.save(model.state_dict(), save_path + ".pt")
+
+        # NEW: Save model every 5 epochs
+        if (epoch + 1) % 5 == 0:
+            torch.save(model.state_dict(), f"{save_path}_epoch{epoch + 1}.pt")
+
         print(f"Epoch {epoch + 1}/{num_epochs} - Train Loss: {avg_train_loss:.4f} - Val Loss: {avg_val_loss:.4f}")
 
         if task in [Task.CLASSIFICATION, Task.JOINT]:
@@ -207,6 +208,7 @@ if __name__ == "__main__":
     model = return_model(task, backbone, denoised, clinical)
 
     save_path = construct_save_path(denoised, backbone, task, clinical)
+    save_path = os.path.join("/exports", "lkeb-hpc", "dzrogmans", save_path)
     print("Save path: " + save_path)
     pair_transform = PairedTransform(size=(336, 544))
     if cropped:
