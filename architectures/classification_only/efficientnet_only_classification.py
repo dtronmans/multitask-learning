@@ -10,13 +10,6 @@ class EfficientNetClinical(nn.Module):
 
         self.global_avg_pool = nn.AdaptiveAvgPool2d(1)
 
-        self.gate = nn.Sequential(
-            nn.Linear(1, 8),
-            nn.ReLU(),
-            nn.Linear(8, 1),
-            nn.Sigmoid()
-        )
-
         self.clinical_proj = nn.Sequential(
             nn.Linear(clinical_feature_dim, 64),
             nn.ReLU(),
@@ -38,9 +31,7 @@ class EfficientNetClinical(nn.Module):
         menopause = clinical_features[:, 0:1]  # shape [B, 1]
         hospital = clinical_features[:, 1:2]  # shape [B, 1]
 
-        gate_value = self.gate(hospital)
-        gated_menopause = gate_value * menopause
-        gated_clinical = torch.cat([gated_menopause, hospital], dim=1)
+        gated_clinical = torch.cat([menopause, hospital], dim=1)
 
         clinical_embedding = self.clinical_proj(gated_clinical)  # (B, 128)
 
