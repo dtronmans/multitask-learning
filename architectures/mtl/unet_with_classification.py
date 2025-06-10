@@ -64,7 +64,7 @@ class UNetWithClinicalClassification(nn.Module):
 
         clinical_emb = self.clinical_embedding(gated_clinical)
         combined = torch.cat([pooled, clinical_emb], dim=1)
-        class_logits = self.classification_head(combined)
+        class_logits = self.classifier(combined)
 
         return seg_logits, class_logits
 
