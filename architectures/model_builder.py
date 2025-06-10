@@ -73,8 +73,10 @@ def return_model(task, backbone, denoised=False,
                 model.classification_head = nn.Sequential(
                     nn.Linear(1024, 256),
                     nn.ReLU(),
-                    nn.Dropout(0.4),
-                    nn.Linear(256, 2)
+                    nn.Dropout(0.25),
+                    nn.Linear(256, 64),
+                    nn.ReLU(),
+                    nn.Linear(64, 2)
                 )
                 model.to(device)
                 return model
