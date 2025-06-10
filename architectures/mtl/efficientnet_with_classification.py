@@ -20,10 +20,10 @@ class EfficientUNetWithClinicalClassification(nn.Module):
         self.down2 = features[2]
         self.down3 = features[3]
         self.down4 = features[4]
-        self.mid = features[5]  # Output: 112
-        self.segmentation_deep = features[6]  # Output: 192
+        self.mid = features[5]
+        self.segmentation_deep = features[6]
 
-        self.classification_conv = nn.Sequential(features[7], features[8])  # Output: 1280
+        self.classification_conv = nn.Sequential(features[7], features[8])  # x7
 
         self.up1 = UpMid(1280, 80, 80, bilinear)
         self.up2 = UpMid(80, 40, 40, bilinear)
@@ -33,15 +33,18 @@ class EfficientUNetWithClinicalClassification(nn.Module):
         self.final_up = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
         self.outc = nn.Conv2d(16, n_segmentation_classes, kernel_size=1)
 
-        self.global_avg_pool = base_model.avgpool
+        self.global_avg_pool = nn.AdaptiveAvgPool2d(1)  # To pool x6 as well
+
         self.clinical_proj = nn.Sequential(
             nn.Linear(2, 64),
             nn.ReLU(),
             nn.Linear(64, 128),
             nn.ReLU()
         )
+
+        # Adjusted input size: x6(192) + x7(1280) + clinical(128)
         self.classifier = nn.Sequential(
-            nn.Linear(1280 + 128, 256),
+            nn.Linear(192 + 1280 + 128, 256),
             nn.ReLU(),
             nn.Dropout(0.25),
             nn.Linear(256, 64),
@@ -60,6 +63,7 @@ class EfficientUNetWithClinicalClassification(nn.Module):
         x6 = self.segmentation_deep(x5)
         x7 = self.classification_conv(x6)
 
+        # Decoder path
         x_seg = self.up1(x7, x4)
         x_seg = self.up2(x_seg, x3)
         x_seg = self.up3(x_seg, x2)
@@ -67,14 +71,16 @@ class EfficientUNetWithClinicalClassification(nn.Module):
         x_seg = self.final_up(x_seg)
         seg_logits = self.outc(x_seg)
 
-        pooled = self.global_avg_pool(x7).view(x7.size(0), -1)  # [B, 1280]
+        # Classification
+        pooled_x6 = self.global_avg_pool(x6).view(x6.size(0), -1)
+        pooled_x7 = self.global_avg_pool(x7).view(x7.size(0), -1)
 
         menopause = clinical[:, 0:1]
         hospital = clinical[:, 1:2]
         gated_clinical = torch.cat([menopause, hospital], dim=1)
-
         clinical_embedding = self.clinical_proj(gated_clinical)
-        x_cls = torch.cat((pooled, clinical_embedding), dim=1)
+
+        x_cls = torch.cat((pooled_x6, pooled_x7, clinical_embedding), dim=1)
         cls_logits = self.classifier(x_cls)
 
         return seg_logits, cls_logits
