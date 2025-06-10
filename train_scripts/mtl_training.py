@@ -134,7 +134,7 @@ def train(train_dataloader, test_dataloader, model, task, save_path, clinical):
             torch.save(model.state_dict(), save_path + ".pt")
 
         # NEW: Save model every 5 epochs
-        if (epoch + 1) % 5 == 0:
+        if (epoch + 1) % 10 == 0:
             torch.save(model.state_dict(), f"{save_path}_epoch{epoch + 1}.pt")
 
         print(f"Epoch {epoch + 1}/{num_epochs} - Train Loss: {avg_train_loss:.4f} - Val Loss: {avg_val_loss:.4f}")

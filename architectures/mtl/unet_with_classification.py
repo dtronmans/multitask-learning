@@ -60,7 +60,9 @@ class UNetWithClinicalClassification(nn.Module):
 
         menopausal = clinical[:, 0:1]
         center_type = clinical[:, 1:2]
+        gated_clinical = torch.cat([menopausal, center_type], dim=1)
 
+        clinical_emb = self.clinical_embedding(gated_clinical)
         combined = torch.cat([pooled, clinical_emb], dim=1)
         class_logits = self.classification_head(combined)
 
