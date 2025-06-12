@@ -212,7 +212,7 @@ if __name__ == "__main__":
     print("Save path: " + save_path)
     pair_transform = PairedTransform(size=(336, 544))
     if cropped:
-        pair_transform = PairedTransform(size=(196, 196))
+        pair_transform = PairedTransform(size=(164, 164))
 
     train_dataset = MedicalImageDataset(dataset_path, split="train", mask_only=mask_only, transform=pair_transform,
                                         cropped=cropped)

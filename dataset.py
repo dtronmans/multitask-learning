@@ -130,9 +130,9 @@ class MedicalImageDataset(Dataset):
         else:
             # Default deterministic transform
             if self.cropped:
-                image = transforms.Resize((196, 196))(image)
+                image = transforms.Resize((164, 164))(image)
                 image = transforms.ToTensor()(image)
-                mask = transforms.Resize((196, 196))(mask)
+                mask = transforms.Resize((164, 164))(mask)
                 mask = transforms.ToTensor()(mask)
             else:
                 image = transforms.Resize((336, 544))(image)
