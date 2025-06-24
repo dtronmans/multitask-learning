@@ -193,7 +193,7 @@ if __name__ == "__main__":
     num_epochs, batch_size, learning_rate = 80, 8, 0.001
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    dataset_path = os.path.join("/exports", "lkeb-hpc", "dzrogmans")
+    dataset_path = os.path.join("LUMCREDACTED")
     if denoised:
         dataset_path = os.path.join(dataset_path, "mtl_denoised")
     elif cropped:
@@ -208,7 +208,7 @@ if __name__ == "__main__":
     model = return_model(task, backbone, denoised, clinical)
 
     save_path = construct_save_path(denoised, backbone, task, clinical)
-    save_path = os.path.join("/exports", "lkeb-hpc", "dzrogmans", save_path)
+    save_path = os.path.join("LUMCREDACTED", save_path)
     print("Save path: " + save_path)
     pair_transform = PairedTransform(size=(336, 544))
     if cropped:

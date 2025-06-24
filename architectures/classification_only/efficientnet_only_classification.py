@@ -26,14 +26,14 @@ class EfficientNetClinical(nn.Module):
 
     def forward(self, x, clinical_features):
         features = self.backbone.encoder(x)
-        pooled = self.global_avg_pool(features).view(features.size(0), -1)  # (B, 1280)
+        pooled = self.global_avg_pool(features).view(features.size(0), -1)
 
-        menopause = clinical_features[:, 0:1]  # shape [B, 1]
-        hospital = clinical_features[:, 1:2]  # shape [B, 1]
+        menopause = clinical_features[:, 0:1]
+        hospital = clinical_features[:, 1:2]
 
         gated_clinical = torch.cat([menopause, hospital], dim=1)
 
-        clinical_embedding = self.clinical_proj(gated_clinical)  # (B, 128)
+        clinical_embedding = self.clinical_proj(gated_clinical)
 
         combined = torch.cat([pooled, clinical_embedding], dim=1)
         class_logits = self.classification_head(combined)

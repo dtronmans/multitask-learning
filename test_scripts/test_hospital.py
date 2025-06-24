@@ -2,7 +2,8 @@ import os
 
 import torch
 from matplotlib import pyplot as plt
-from sklearn.metrics import f1_score, roc_auc_score, precision_score
+from sklearn.metrics import f1_score, roc_auc_score, precision_score, confusion_matrix, ConfusionMatrixDisplay
+import matplotlib.pyplot as plt
 from torch import nn
 from torch.utils.data import DataLoader
 from torchvision import transforms
@@ -15,7 +16,7 @@ from enums import Backbone, Task
 from train_scripts.mtl_training import return_model
 
 
-def test_model(model, dataloader, task, device, clinical, threshold=0.3, show=False):
+def test_model(model, dataloader, task, device, clinical, threshold=0.2, show=False):
     model.to(device)
     model.eval()
     correct_cls = 0
@@ -78,8 +79,7 @@ def test_model(model, dataloader, task, device, clinical, threshold=0.3, show=Fa
         specificity = true_negative / (true_negative + false_positive) if (true_negative + false_positive) > 0 else 0
 
         f1 = f1_score(all_labels, all_preds)
-        auc = roc_auc_score(all_labels, all_probs) if len(set(all_labels)) > 1 else float(
-            'nan')  # avoid AUC error if only one class
+        auc = roc_auc_score(all_labels, all_probs) if len(set(all_labels)) > 1 else float('nan')
         precision = precision_score(all_labels, all_preds)
 
         print(f"Classification Accuracy: {acc:.2f}%")
@@ -91,6 +91,13 @@ def test_model(model, dataloader, task, device, clinical, threshold=0.3, show=Fa
         print("\nConfusion Matrix:")
         print(f"TP: {true_positive} | FP: {false_positive}")
         print(f"FN: {false_negative} | TN: {true_negative}")
+
+        # Plot confusion matrix
+        cm = confusion_matrix(all_labels, all_preds)
+        disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=[0, 1])
+        disp.plot(cmap='Blues', values_format='d')
+        plt.title("Confusion Matrix")
+        plt.show()
 
     if task in [Task.SEGMENTATION, Task.JOINT]:
         mean_iou = sum(iou_scores) / len(iou_scores) if iou_scores else 1.0
@@ -139,7 +146,7 @@ def visualize_joint_prediction(images, pred_masks, preds, labels, clinical_info,
 
         axs[1].imshow(image, cmap=cmap)
         axs[1].imshow(pred_mask, alpha=0.5, cmap='Reds')
-        axs[1].set_title("Predicted Mask Overlay")
+        axs[1].set_title("Lesion Overlay")
         axs[1].axis("off")
 
         plt.figtext(0.5, 0.01, f"Path: {image_path}", wrap=True, ha='center', fontsize=10)
@@ -148,15 +155,17 @@ def visualize_joint_prediction(images, pred_masks, preds, labels, clinical_info,
 
 
 if __name__ == "__main__":
-    denoised = False
-    clinical = True
     cropped = False
+    denoised = True
+
+    clinical = False
     backbone = Backbone.EFFICIENTNET
     task = Task.JOINT
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    mask_only = False
+    mask_only = True
     if task == task.CLASSIFICATION or task == task.JOINT:
         mask_only = False
+
 
     print("backbone: " + str(backbone))
     print("clinical: " + str(clinical))
@@ -165,19 +174,18 @@ if __name__ == "__main__":
     dataset_path = os.path.join("..", "final_datasets", "once_more")
     if denoised:
         dataset_path = os.path.join(dataset_path, "mtl_denoised")
+    elif cropped:
+        dataset_path = "mtl_cropped"
     else:
         dataset_path = os.path.join(dataset_path, "mtl_final")
 
-    if cropped:
-        dataset_path = os.path.join(dataset_path, "mtl_cropped")
-
     print("dataset path: " + dataset_path)
     model = return_model(task, backbone, denoised, clinical)
-    model.load_state_dict(torch.load("models/hospital/joint/efficientnet_joint_clinical.pt", weights_only=True,
+    model.load_state_dict(torch.load("models/hospital/joint/not_clinical_denoised/efficientnet_joint_denoised.pt", weights_only=True,
                                      map_location=device))
 
     model.eval()
-    test_dataset = MedicalImageDataset(dataset_path, split="test", mask_only=mask_only)
+    test_dataset = MedicalImageDataset(dataset_path, split="test", mask_only=mask_only, cropped=cropped)
 
     test_loader = DataLoader(test_dataset, batch_size=1, shuffle=True)
 

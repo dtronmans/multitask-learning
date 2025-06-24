@@ -65,16 +65,16 @@ def test_segmentation_only(model, dataloader, show=False):
 
 
 if __name__ == "__main__":
-    directory = "../final_datasets/once_more/OTU_2d"
+    directory = "../final_datasets/once_more/OTU_2d_denoised"
     eps = 1e-6
     dataset = MultimodalMMOTUDataset(directory, phase="test", paired_transform=DefaultPairedTransform())
     dataloader = DataLoader(dataset, batch_size=1, shuffle=False)
 
-    model = EfficientClassificationOnly(1,  8)
+    model = EfficientUNetWithClassification(1, 1,  8)
     model.load_state_dict(
-        torch.load("models/mmotu/classification/efficientnet_classification.pt", map_location=torch.device("cpu")))
+        torch.load("models/mmotu/joint/efficientnet_joint_denoised.pt", map_location=torch.device("cpu")))
     model.to(torch.device("cpu"))
 
     model.eval()
 
-    test_classification_only(model, dataloader)
+    test_segmentation_only(model, dataloader)

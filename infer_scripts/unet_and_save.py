@@ -50,6 +50,7 @@ def save_cropped_segmented_images(model, dataloader, destination_folder):
 
                 cropped = image_np[y1:y2, x1:x2]
             else:
+                print(filename)
                 # Take center 256x256 crop
                 h, w = image_np.shape
                 center_y, center_x = h // 2, w // 2
@@ -79,9 +80,9 @@ def save_cropped_segmented_images(model, dataloader, destination_folder):
 
 
 if __name__ == "__main__":
-    file_path = "/exports/lkeb-hpc/dzrogmans/mtl_final"
-    model_path = "models/hospital/segmentation/efficientnet_segmentation.pt"
-    destination_folder = "/exports/lkeb-hpc/dzrogmans/mtl_cropped"
+    file_path = "../final_datasets/once_more/dump/mtl_denoised/mtl_denoised"
+    model_path = "models/hospital/segmentation/efficientnet_segmentation_denoised.pt"
+    destination_folder = "mtl_cropped"
 
     transform = transforms.Compose([
         transforms.Resize((336, 544)),

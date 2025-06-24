@@ -42,9 +42,8 @@ class EfficientUNetWithClinicalClassification(nn.Module):
             nn.ReLU()
         )
 
-        # Adjusted input size: x6(192) + x7(1280) + clinical(128)
         self.classifier = nn.Sequential(
-            nn.Linear(192 + 1280 + 128, 256),
+            nn.Linear(1280 + 128, 256),
             nn.ReLU(),
             nn.Dropout(0.25),
             nn.Linear(256, 64),
@@ -72,7 +71,6 @@ class EfficientUNetWithClinicalClassification(nn.Module):
         seg_logits = self.outc(x_seg)
 
         # Classification
-        pooled_x6 = self.global_avg_pool(x6).view(x6.size(0), -1)
         pooled_x7 = self.global_avg_pool(x7).view(x7.size(0), -1)
 
         menopause = clinical[:, 0:1]
@@ -80,7 +78,7 @@ class EfficientUNetWithClinicalClassification(nn.Module):
         gated_clinical = torch.cat([menopause, hospital], dim=1)
         clinical_embedding = self.clinical_proj(gated_clinical)
 
-        x_cls = torch.cat((pooled_x6, pooled_x7, clinical_embedding), dim=1)
+        x_cls = torch.cat((pooled_x7, clinical_embedding), dim=1)
         cls_logits = self.classifier(x_cls)
 
         return seg_logits, cls_logits
