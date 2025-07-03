@@ -15,3 +15,10 @@ Here are the required training flags:
 - task: joint OR segmentation OR classification, joint means classification + semantic segmentation
 - backbone: "efficientnet" is EfficientNetB0 and "classic" is a U-Net backbone
 
+## Running inference with a model
+
+After training a model, the test script uses the test dataset to evaluate the performance of this trained model. In order run the test script, run python -m test_scripts.test_hospital.
+
+The test_scripts/test_hospital directory has the following 
+
+## Note on paths

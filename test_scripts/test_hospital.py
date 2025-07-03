@@ -9,7 +9,6 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 from tqdm import tqdm
 
-from architectures.model_with_temperature import ModelWithTemperature
 from architectures.mtl.efficientnet_with_classification import EfficientUNetWithClinicalClassification
 from dataset import MedicalImageDataset
 from enums import Backbone, Task
@@ -158,7 +157,7 @@ if __name__ == "__main__":
     cropped = False
     denoised = True
 
-    clinical = False
+    clinical = True
     backbone = Backbone.EFFICIENTNET
     task = Task.JOINT
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -181,7 +180,7 @@ if __name__ == "__main__":
 
     print("dataset path: " + dataset_path)
     model = return_model(task, backbone, denoised, clinical)
-    model.load_state_dict(torch.load("models/hospital/joint/not_clinical_denoised/efficientnet_joint_denoised.pt", weights_only=True,
+    model.load_state_dict(torch.load("models/hospital/joint/clinical_denoised/efficientnet_joint_clinical_denoised.pt", weights_only=True,
                                      map_location=device))
 
     model.eval()
@@ -189,4 +188,4 @@ if __name__ == "__main__":
 
     test_loader = DataLoader(test_dataset, batch_size=1, shuffle=True)
 
-    test_model(model, test_loader, task, device, clinical, show=False)
+    test_model(model, test_loader, task, device, clinical, show=True)
